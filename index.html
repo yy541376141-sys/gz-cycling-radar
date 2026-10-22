@@ -1,0 +1,1893 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>骑行巡航雷达 (广州 1,830监控)</title>
+  
+  <!-- iOS PWA Meta & Web App 配置 -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="骑行雷达">
+  <meta name="theme-color" content="#0b0f19" media="(prefers-color-scheme: dark)">
+  <meta name="format-detection" content="telephone=no,email=no,address=no">
+
+  <!-- iOS 桌面高清应用图标 -->
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-180.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
+
+  <!-- Leaflet CSS & MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  
+  <style>
+    :root {
+      --accent-cyan: #00f2fe;
+      --accent-blue: #2563eb;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: var(--font-stack);
+      touch-action: manipulation;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      position: fixed;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+    }
+
+    /* ================= 1. 双主题配色系统 (日间模式 vs 夜间模式) ================= */
+    /* 夜间暗黑模式 (18:30 ~ 次日 06:30 自动开启) */
+    body.theme-night {
+      --bg-dark: #080c16;
+      --card-bg: rgba(13, 20, 36, 0.90);
+      --card-blur: blur(20px);
+      --card-border: 1px solid rgba(0, 242, 254, 0.22);
+      --card-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 1px rgba(0, 242, 254, 0.35);
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --text-value: #ffffff;
+      --text-accent: #00f2fe;
+      --border-subtle: rgba(255, 255, 255, 0.12);
+      --btn-bg: rgba(255, 255, 255, 0.08);
+      --btn-border: 1px solid rgba(255, 255, 255, 0.16);
+      --btn-text: #f8fafc;
+      --btn-active-bg: rgba(0, 242, 254, 0.22);
+      --btn-active-border: 1.5px solid #00f2fe;
+      --btn-active-text: #00f2fe;
+      --radar-color: #00f2fe;
+      --radar-fill: rgba(0, 242, 254, 0.16);
+      --status-safe-border: #10b981;
+      --status-safe-bg: rgba(16, 185, 129, 0.12);
+      --status-warn-border: #f59e0b;
+      --status-warn-bg: rgba(38, 25, 10, 0.94);
+      --status-danger-border: #ef4444;
+      --status-danger-bg: rgba(45, 12, 22, 0.96);
+      --tile-filter: invert(100%) hue-rotate(180deg) brightness(88%) contrast(92%) saturate(120%);
+    }
+
+    /* 日光日间模式 (06:30 ~ 18:30 自动开启，高反差抗反光) */
+    body.theme-sunlight {
+      --bg-dark: #f8fafc;
+      --card-bg: #ffffff;
+      --card-blur: none;
+      --card-border: 2.5px solid #000000;
+      --card-shadow: 0 8px 0 #000000, 0 12px 28px rgba(0, 0, 0, 0.22);
+      --text-main: #000000;
+      --text-sub: #1e293b;
+      --text-value: #000000;
+      --text-accent: #0284c7;
+      --border-subtle: rgba(0, 0, 0, 0.22);
+      --btn-bg: #f8fafc;
+      --btn-border: 2px solid #000000;
+      --btn-text: #000000;
+      --btn-active-bg: #000000;
+      --btn-active-border: 2px solid #000000;
+      --btn-active-text: #ffffff;
+      --radar-color: #0284c7;
+      --radar-fill: rgba(2, 132, 199, 0.20);
+      --status-safe-border: #166534;
+      --status-safe-bg: #f0fdf4;
+      --status-warn-border: #b45309;
+      --status-warn-bg: #fefce8;
+      --status-danger-border: #b91c1c;
+      --status-danger-bg: #fef2f2;
+      --tile-filter: contrast(108%) saturate(112%);
+    }
+
+    #map .leaflet-tile-pane {
+      filter: var(--tile-filter);
+      transition: filter 0.35s ease;
+    }
+
+    /* ================= 2. HUD 全屏余光识别警示系统 ================= */
+    .peripheral-alert-frame {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+    }
+    .peripheral-alert-frame.warning {
+      opacity: 1;
+      box-shadow: inset 0 0 50px rgba(245, 158, 11, 0.65), inset 0 0 18px rgba(245, 158, 11, 0.85);
+      animation: peripheral-amber-breathe 1.25s infinite ease-in-out;
+    }
+    .peripheral-alert-frame.danger {
+      opacity: 1;
+      box-shadow: inset 0 0 85px rgba(239, 68, 68, 0.88), inset 0 0 30px rgba(255, 30, 70, 1);
+      animation: peripheral-red-strobe 0.7s infinite ease-in-out;
+    }
+    .peripheral-alert-frame.danger::before,
+    .peripheral-alert-frame.danger::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 7px;
+      background: repeating-linear-gradient(-45deg, #ef4444, #ef4444 14px, #ffffff 14px, #ffffff 28px);
+      animation: hazard-stripe-shift 0.6s linear infinite;
+    }
+    .peripheral-alert-frame.danger::before { top: 0; }
+    .peripheral-alert-frame.danger::after { bottom: 0; }
+
+    @keyframes hazard-stripe-shift {
+      0% { background-position: 0 0; }
+      100% { background-position: 40px 0; }
+    }
+    @keyframes peripheral-amber-breathe {
+      0%, 100% { box-shadow: inset 0 0 35px rgba(245, 158, 11, 0.45); }
+      50% { box-shadow: inset 0 0 70px rgba(245, 158, 11, 0.85); }
+    }
+    @keyframes peripheral-red-strobe {
+      0%, 100% { box-shadow: inset 0 0 45px rgba(239, 68, 68, 0.5); filter: brightness(1); }
+      50% { box-shadow: inset 0 0 100px rgba(239, 68, 68, 1); filter: brightness(1.25); }
+    }
+
+    /* 拟触觉高光光效 */
+    #haptic-visual-border {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9998;
+      box-shadow: inset 0 0 0 0 transparent;
+    }
+    #haptic-visual-border.haptic-approach { animation: hapticPulseApproach 0.45s ease-out forwards; }
+    #haptic-visual-border.haptic-urgent { animation: hapticPulseUrgent 0.55s ease-out forwards; }
+    #haptic-visual-border.haptic-pass { animation: hapticPulsePass 0.4s ease-out forwards; }
+
+    @keyframes hapticPulseApproach {
+      0% { box-shadow: inset 0 0 35px rgba(245, 158, 11, 0.85); }
+      100% { box-shadow: inset 0 0 0 transparent; }
+    }
+    @keyframes hapticPulseUrgent {
+      0% { box-shadow: inset 0 0 50px rgba(239, 68, 68, 0.95); }
+      50% { box-shadow: inset 0 0 50px rgba(239, 68, 68, 0.95); }
+      100% { box-shadow: inset 0 0 0 transparent; }
+    }
+    @keyframes hapticPulsePass {
+      0% { box-shadow: inset 0 0 35px rgba(16, 185, 129, 0.85); }
+      100% { box-shadow: inset 0 0 0 transparent; }
+    }
+
+    /* ================= 3. 顶部 HUD 卡片 ================= */
+    .top-hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: max(10px, env(safe-area-inset-top)) 14px 0 14px;
+    }
+
+    .alert-card {
+      pointer-events: auto;
+      width: 100%;
+      max-width: 440px;
+      margin-top: 4px;
+      background: var(--card-bg);
+      backdrop-filter: var(--card-blur);
+      -webkit-backdrop-filter: var(--card-blur);
+      border: var(--card-border);
+      border-radius: 20px;
+      padding: 13px 18px;
+      box-shadow: var(--card-shadow);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .alert-card.status-safe {
+      border-left: 6px solid var(--status-safe-border);
+      background: var(--status-safe-bg);
+    }
+    .alert-card.status-warning {
+      border-left: 6px solid var(--status-warn-border);
+      background: var(--status-warn-bg);
+      animation: pulse-border 1.5s infinite;
+    }
+    .alert-card.status-danger {
+      border-left: 6px solid var(--status-danger-border);
+      background: var(--status-danger-bg);
+      animation: pulse-danger 0.9s infinite;
+    }
+
+    @keyframes pulse-border {
+      0%, 100% { border-color: rgba(245, 158, 11, 0.5); }
+      50% { border-color: rgba(245, 158, 11, 1); }
+    }
+    @keyframes pulse-danger {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-sub);
+    }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .badge-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-green); }
+    .badge-status.warning .dot { background: var(--accent-amber); }
+    .badge-status.danger .dot { background: var(--accent-red); }
+
+    .hud-main { display: flex; justify-content: space-between; align-items: center; }
+    .hud-title-box { flex: 1; padding-right: 12px; overflow: hidden; }
+    .hud-point-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: -0.3px;
+    }
+    .hud-point-sub { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+
+    .hud-dist-box { text-align: right; min-width: 80px; }
+    .hud-dist-value {
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1;
+      font-feature-settings: "tnum";
+      font-variant-numeric: tabular-nums;
+      color: var(--text-accent);
+      letter-spacing: -1px;
+    }
+    .hud-dist-box.warning .hud-dist-value { color: var(--accent-amber); }
+    .hud-dist-box.danger .hud-dist-value { color: var(--accent-red); }
+    .hud-dist-unit { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+
+    .hud-progress-bg {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 2px;
+    }
+    .hud-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--text-accent);
+      transition: width 0.3s ease;
+      border-radius: 2px;
+    }
+    .warning .hud-progress-bar { background: var(--accent-amber); }
+    .danger .hud-progress-bar { background: var(--accent-red); }
+
+    /* ================= 4. 底部驾驶舱仪表盘与大触控区 ================= */
+    .bottom-cockpit {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 14px max(14px, env(safe-area-inset-bottom)) 14px;
+    }
+
+    .cockpit-panel {
+      pointer-events: auto;
+      width: 100%;
+      max-width: 440px;
+      background: var(--card-bg);
+      backdrop-filter: var(--card-blur);
+      -webkit-backdrop-filter: var(--card-blur);
+      border: var(--card-border);
+      border-radius: 24px;
+      padding: 14px 18px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .instruments-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      margin-bottom: 12px;
+    }
+
+    .inst-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      flex: 1;
+    }
+
+    .inst-label { font-size: 11px; color: var(--text-sub); letter-spacing: 0.5px; margin-bottom: 4px; }
+    .speed-value {
+      font-size: 36px;
+      font-weight: 900;
+      line-height: 1;
+      color: var(--text-value);
+      font-feature-settings: "tnum";
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -1.2px;
+    }
+    .speed-unit { font-size: 11px; color: var(--text-accent); font-weight: 700; margin-top: 3px; }
+
+    .heading-arrow {
+      font-size: 28px;
+      color: var(--text-accent);
+      transition: transform 0.2s linear;
+      display: inline-block;
+      line-height: 1;
+    }
+    .heading-text { font-size: 13px; font-weight: 700; color: var(--text-main); margin-top: 4px; }
+    .target-count { font-size: 26px; font-weight: 800; line-height: 1; color: var(--text-main); }
+    .inst-divider { width: 1px; height: 38px; background: var(--border-subtle); }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .btn-act {
+      min-height: 56px;
+      border: var(--btn-border);
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      border-radius: 14px;
+      padding: 8px 4px;
+      font-size: 11.5px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: all 0.15s cubic-bezier(0.2, 0.9, 0.4, 1);
+    }
+    .btn-act:active { transform: translateY(2px) scale(0.96); }
+    .btn-act.active {
+      background: var(--btn-active-bg);
+      border: var(--btn-active-border);
+      color: var(--btn-active-text);
+    }
+    .btn-act svg { width: 18px; height: 18px; stroke-width: 2.3; }
+
+    /* 浮动工具栏 */
+    .floating-tools {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .btn-tool {
+      width: 50px;
+      height: 50px;
+      border-radius: 16px;
+      background: var(--card-bg);
+      backdrop-filter: var(--card-blur);
+      -webkit-backdrop-filter: var(--card-blur);
+      border: var(--btn-border);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+    .btn-tool:active { transform: translateY(2px) scale(0.92); }
+
+    /* 自动模式微标 */
+    .badge-auto {
+      position: absolute;
+      bottom: 2px;
+      right: 4px;
+      font-size: 9px;
+      font-weight: 900;
+      background: var(--text-accent);
+      color: #0b0f19;
+      border-radius: 4px;
+      padding: 1px 3px;
+      line-height: 1;
+    }
+
+    /* ================= 5. 横屏宽屏车机双联屏适配 ================= */
+    @media (orientation: landscape) {
+      body { display: flex; flex-direction: row; }
+      .top-hud {
+        position: static;
+        width: 380px;
+        max-width: 44%;
+        min-width: 320px;
+        height: 100%;
+        background: var(--card-bg);
+        backdrop-filter: var(--card-blur);
+        -webkit-backdrop-filter: var(--card-blur);
+        border-right: var(--card-border);
+        padding: max(10px, env(safe-area-inset-top)) 16px max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        pointer-events: auto;
+        z-index: 1000;
+      }
+      .bottom-cockpit {
+        position: static;
+        width: 100%;
+        padding: 0;
+        pointer-events: auto;
+      }
+      .cockpit-panel {
+        width: 100%;
+        max-width: none;
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        margin: 0;
+      }
+      .speed-value { font-size: 52px; }
+      #map {
+        position: relative;
+        flex: 1;
+        height: 100%;
+      }
+      .floating-tools { right: max(14px, env(safe-area-inset-right)); }
+    }
+
+    /* ================= 6. 静态纯净前方雷达扇区 (彻底移除摇摆扫动，安定不晃眼) ================= */
+    .leaflet-radar-cone {
+      pointer-events: none;
+      transition: stroke 0.3s ease, fill 0.3s ease;
+      stroke-dasharray: 4, 4;
+    }
+
+    /* 摄像头图钉 */
+    .camera-marker-pin {
+      width: 28px;
+      height: 28px;
+      background: #0284c7;
+      border: 2px solid #ffffff;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .camera-marker-pin svg {
+      transform: rotate(45deg);
+      width: 14px;
+      height: 14px;
+      fill: #ffffff;
+    }
+    .camera-marker-pin.alerting {
+      background: #ef4444 !important;
+      border-color: #ffedd5;
+      animation: alert-cam-pulse 1s infinite;
+    }
+    @keyframes alert-cam-pulse {
+      0%, 100% { transform: rotate(-45deg) scale(1.1); }
+      50% { transform: rotate(-45deg) scale(1.35); }
+    }
+
+    /* 聚合簇样式 */
+    .marker-cluster-small { background-color: rgba(2, 132, 199, 0.6) !important; }
+    .marker-cluster-small div { background-color: rgba(2, 132, 199, 0.9) !important; color: #fff !important; font-weight: 700 !important; }
+    .marker-cluster-medium { background-color: rgba(14, 165, 233, 0.6) !important; }
+    .marker-cluster-medium div { background-color: rgba(14, 165, 233, 0.9) !important; color: #fff !important; font-weight: 700 !important; }
+    .marker-cluster-large { background-color: rgba(37, 99, 235, 0.6) !important; }
+    .marker-cluster-large div { background-color: rgba(37, 99, 235, 0.9) !important; color: #fff !important; font-weight: 700 !important; }
+
+    /* 车头标记 */
+    .vehicle-core {
+      width: 30px;
+      height: 30px;
+      background: #00f2fe;
+      border: 3px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 0 18px rgba(0, 242, 254, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease;
+    }
+    .vehicle-pointer {
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-bottom: 12px solid #041226;
+      transform: translateY(-1px);
+    }
+
+    /* 启动手势遮罩 */
+    #start-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: rgba(8, 12, 22, 0.96);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .start-box {
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .start-icon {
+      width: 76px;
+      height: 76px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, #00f2fe, #0099ff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0b0f19;
+      box-shadow: 0 10px 25px rgba(0, 242, 254, 0.4);
+    }
+    .btn-start-main {
+      width: 100%;
+      background: linear-gradient(135deg, #00f2fe, #0099ff);
+      color: #041226;
+      border: none;
+      padding: 16px;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(0, 242, 254, 0.35);
+      margin-top: 6px;
+    }
+    .btn-start-main:active { transform: scale(0.97); }
+
+    #pwa-install-banner {
+      display: none;
+      position: fixed;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      left: 16px;
+      right: 16px;
+      max-width: 440px;
+      margin: 0 auto;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 16px;
+      padding: 12px 16px;
+      z-index: 5000;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: #ffffff;
+    }
+    #pwa-install-banner .close-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px;
+    }
+  </style>
+</head>
+<body class="theme-night">
+
+  <!-- 全屏外周余光识别层 -->
+  <div class="peripheral-alert-frame" id="peripheral-alert-frame"></div>
+  <!-- 拟触觉高光光效层 -->
+  <div id="haptic-visual-border"></div>
+
+  <!-- 地图容器 -->
+  <div id="map"></div>
+
+  <!-- 浮动右侧快捷工具 -->
+  <div class="floating-tools">
+    <button class="btn-tool" id="btn-recenter" title="定位到车头">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+    </button>
+    <button class="btn-tool" id="btn-view-all" title="全览广州摄像头">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+    </button>
+    <button class="btn-tool" id="btn-theme-toggle" title="主题模式 (东八区自动/手动)">
+      <svg id="icon-theme-sun" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <svg id="icon-theme-moon" style="display:none;" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <span class="badge-auto" id="theme-auto-badge">A</span>
+    </button>
+  </div>
+
+  <!-- 顶部预警 HUD 卡片 -->
+  <div class="top-hud">
+    <div class="alert-card status-safe" id="alert-card">
+      <div class="hud-header">
+        <span class="badge-status" id="badge-status">
+          <span class="dot"></span>
+          <span id="status-text">巡航雷达运行中</span>
+        </span>
+        <span id="hud-sub-status">车速自适应预警</span>
+      </div>
+      <div class="hud-main">
+        <div class="hud-title-box">
+          <div class="hud-point-title" id="alert-title">前方道路通畅</div>
+          <div class="hud-point-sub" id="alert-desc">航向正常 · 雷达守护中</div>
+        </div>
+        <div class="hud-dist-box" id="hud-dist-box">
+          <div class="hud-dist-value" id="alert-distance">--</div>
+          <div class="hud-dist-unit" id="alert-dist-unit">米</div>
+        </div>
+      </div>
+      <div class="hud-progress-bg">
+        <div class="hud-progress-bar" id="hud-progress"></div>
+      </div>
+    </div>
+
+    <!-- 底部驾驶舱仪表 -->
+    <div class="bottom-cockpit">
+      <div class="cockpit-panel">
+        <div class="instruments-row">
+          <div class="inst-item">
+            <span class="inst-label">当前时速</span>
+            <div class="speed-value" id="inst-speed">0.0</div>
+            <span class="speed-unit">KM/H</span>
+          </div>
+          <div class="inst-divider"></div>
+          <div class="inst-item">
+            <span class="inst-label">行驶航向</span>
+            <div class="heading-arrow" id="inst-arrow">↑</div>
+            <div class="heading-text" id="inst-heading">正西 270°</div>
+          </div>
+          <div class="inst-divider"></div>
+          <div class="inst-item">
+            <span class="inst-label">预计到达</span>
+            <div class="target-count" id="inst-eta">--</div>
+            <span class="speed-unit">秒</span>
+          </div>
+        </div>
+
+        <div class="controls-grid">
+          <button class="btn-act active" id="btn-mode-sim">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span>模拟骑行</span>
+          </button>
+          <button class="btn-act" id="btn-mode-gps">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg>
+            <span>真机GPS</span>
+          </button>
+          <button class="btn-act" id="btn-dist-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="6" x2="12" y2="12"/></svg>
+            <span id="lbl-dist-mode">自适应</span>
+          </button>
+          <button class="btn-act active" id="btn-voice-toggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            <span id="lbl-voice">语音开</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- iOS PWA 添加到主屏幕引导条 -->
+  <div id="pwa-install-banner">
+    <div style="flex:1;">
+      <strong>添加到 iPhone 主屏幕</strong><br>
+      轻点下方分享按钮 ⎋，选择<strong>「添加到主屏幕 ⊞」</strong>获得沉浸式车机与后台保活！
+    </div>
+    <button class="close-btn" id="btn-close-pwa-banner">✕</button>
+  </div>
+
+  <!-- iOS 首次交互遮罩 -->
+  <div id="start-overlay">
+    <div class="start-box">
+      <div class="start-icon">
+        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+      </div>
+      <h2 style="font-size:22px;font-weight:900;">骑行巡航雷达</h2>
+      <p style="font-size:13.5px;color:#94a3b8;line-height:1.6;">
+        专为 iPhone 骑行支架设计<br>
+        行驶方向预测 · 接近语音提示 · 屏幕常亮 · 后台保活<br>
+        <span style="color:#00f2fe;font-weight:700;">已载入 1,830 个广州道路监控点位</span>
+      </p>
+      <button class="btn-start-main" id="btn-start-experience">立即启程 · 解锁巡航</button>
+    </div>
+  </div>
+
+  <!-- Leaflet & MarkerCluster JS -->
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <script>
+    /* ==========================================================================
+       1. 监控点位数据 (广州 1,830 点)
+       ========================================================================== */
+    const ALL_POINTS = [[23.132484, 113.258929, "东风中路盘福立交下桥位(东往西)"], [23.130659, 113.271353, "东风中路仓边路路口"], [23.131448, 113.299891, "东风东路农林下路立交路段"], [23.131861, 113.261534, "东风解放高架路段(东往西)"], [23.118272, 113.264411, "起义路大德路路口"], [23.130543, 113.271544, "仓边小北高架路段"], [23.135665, 113.289447, "环市东路华侨新村路段"], [23.126919, 113.278719, "中山四路越秀中路路口"], [23.119785, 113.314688, "广州大道中寺右新马路路口"], [23.139249, 113.275287, "环市中路小北路路口"], [23.139425, 113.279647, "环市东路麓湖路路口"], [23.132974, 113.254259, "东风西路人民北路路口"], [23.131685, 113.302793, "东风东路福今路路口"], [23.116645, 113.262829, "解放南路大新路路口"], [23.147789, 113.253514, "环市西路市站对出路段"], [23.125151, 113.257446, "中山六路海珠北路路口"], [23.128438, 113.309544, "中山一路梅东路路口"], [23.125173, 113.300797, "中山一路达道路路口(西往东)"], [23.11465, 113.315008, "广州大道中省政协对出路段"], [23.115472, 113.276024, "沿江中路德政南路路口"], [23.109276, 113.256487, "沿江西路长堤大马路路口"], [23.143869, 113.287836, "恒福路淘金北路路口"], [23.139088, 113.297217, "先烈中路太和岗路路口"], [23.143058, 113.30199, "先烈中路动物园北门对出路段"], [23.103964, 113.313668, "红梅路滨江东路路路口"], [23.091055, 113.297038, "新港西路中大南门路段"], [23.0962, 113.327311, "新港中路赤岗路口逆行西往东"], [23.101697, 113.262235, "宝岗大道宝岗体育场路口(南往北)"], [23.083097, 113.315652, "广州大道南逸景路路口(未安装)"], [23.086351, 113.287034, "东晓南凤景西路路口"], [23.097659, 113.248783, "洲头咀隧道海珠区路段"], [23.076648, 113.291111, "新滘西路东晓南路口隧道东往西"], [23.077727, 113.309233, "新滘西路上冲公园对出路段"], [23.07813, 113.331732, "新滘中路龙潭立交路段"], [23.100669, 113.315353, "广州大道南金菊路路口"], [23.104183, 113.386656, "车陂南隧道路段(海珠区)"], [23.082863, 113.31562, "广州大道南逸景路路口(未安装)"], [23.098558, 113.343527, "新港东路海洲路路口(西往东)"], [23.106567, 113.334183, "猎德大桥路段(海珠区)"], [23.073568, 113.313122, "广州大道南新滘中路路口"], [23.100648, 113.315871, "广州大道南艺景路路口"], [23.089717, 113.315926, "广州大道南敦和大厦对出路段"], [23.137546, 113.237679, "东风西路西场地铁站对出路段"], [23.125644, 113.249069, "中山七路隆庆小区路路口"], [23.147363, 113.242002, "西湾路站西路对出路段(北往南)"], [23.101974, 113.236942, "珠江隧道路段"], [23.120123, 113.246955, "康王中路第四中学对出路段北往南"], [23.125236, 113.254474, "人民路高架桥中山七路路段"], [23.105761, 113.250213, "人民桥路段(北往南)"], [23.125412, 113.236429, "中山八路泮塘路路口"], [23.111481, 113.24882, "康王南路和平中路南往北"], [23.115775, 113.231864, "黄沙大道多宝路路口(北往南)"], [23.074654, 113.244072, "鹤洞大桥路段"], [23.071231, 113.238865, "鹤洞路崇文四路路口"], [23.066718, 113.23402, "花地大道中市一医院对出路段"], [23.062555, 113.255125, "芳村大道南环翠北路路口(南往北)"], [23.094135, 113.230224, "东激北路荣兴路路口(北往南)"], [23.098712, 113.235828, "花地大道北芳村大道中路口"], [23.091706, 113.233603, "花地大道北花蕾路路口(南往北)"], [23.125521, 113.247525, "康王北路中山七路口(南往北)"], [23.126049, 113.247373, "康王北路中山七路口(北往南)"], [23.127213, 113.243113, "荔湾路陈家祠对出路段(南往北)"], [23.052178, 113.222156, "花地大道南海南村对出路段"], [23.090207, 113.216741, "穗盐路葵蓬路路口(东往西)"], [23.12551, 113.232194, "中山八路电车总站对出路段"], [23.107003, 113.218226, "芳村大道中桥梓大街路口(东往西)"], [23.093845, 113.233808, "花地大道北荣兴路路口"], [23.105936, 113.220068, "芳村大道西桥梓大街路口"], [23.067549, 113.197456, "龙溪大道裕海路路口"], [23.071789, 113.21243, "龙溪大道增南路路口(西往东)"], [23.078176, 113.250157, "鹤洞大桥西路段"], [23.147328, 113.250959, "环市西路广园西路路口(西往东)"], [23.147216, 113.24904, "广园西路万通大厦对出路段"], [23.141041, 113.321631, "天河北路体育西路路口(双向)"], [23.12479, 113.396701, "中山大道车陂路路口"], [23.121899, 113.403817, "中山大道东圃大马路路口(西向东)"], [23.126795, 113.337597, "黄埔大道西路段"], [23.146341, 113.346349, "广园快速五山跨线桥路段(北往南)"], [23.110932, 113.374629, "琶洲大桥路段"], [23.112853, 113.333744, "猎德大桥路段(天河区)"], [23.11385, 113.389346, "车陂南隧道路段(天河区)"], [23.133262, 113.334199, "天河路天河东路路口"], [23.132966, 113.328458, "天河路体育东路路口"], [23.133577, 113.362351, "中山大道天府路路口"], [23.124486, 113.393939, "中山大道车陂BRT路段(东往西)"], [23.129041, 113.372348, "中山大道学院BRT路段"], [23.191805, 113.36656, "天源路迎龙路路口"], [23.13462, 113.339502, "中山大道岗顶BRT路段"], [23.122752, 113.332808, "猎德大道金穗路隧道路段"], [23.187216, 113.327868, "广州大道北南方医院路口路段"], [23.181873, 113.333929, "沙太中路麒麟岗路口(南往北)"], [23.250827, 113.352701, "大源中路大源东路路口(南往北)"], [23.197243, 113.325972, "广州大道北同和街道办对出路段"], [23.182103, 113.333911, "沙太路白云一大队对出路段"], [23.18266, 113.327988, "京溪路京溪牌坊对出路段"], [23.365548, 113.362902, "竹料大道田心二巷路口"], [23.257463, 113.357056, "大源北路维城街路口北往南"], [23.246574, 113.349306, "大源中路田新路路口"], [23.213267, 113.315183, "同泰路松园宾馆对出路段"], [23.205667, 113.32305, "同泰路旅游学校对出路段"], [23.203561, 113.324107, "同泰路云祥路口(西往东)"], [23.19399, 113.242564, "石槎路棠涌金堂路路口"], [23.19567, 113.221485, "凤凰路广州医药学校路段"], [23.175745, 113.259528, "机场路南云东街路口(北往南)"], [23.196266, 113.249532, "棠新路潭涌路路口"], [23.195879, 113.226015, "庆槎路凤凰路路口"], [23.193314, 113.247904, "棠棠路棠乐路路口(南往北)"], [23.207715, 113.247593, "棠棠路黄石西路路口(北往南)"], [23.196709, 113.238504, "潭涌路石井河路段"], [23.195799, 113.226396, "潭涌路庆槎路路口"], [23.188845, 113.247614, "棠棠路潭溪路路口(北往南)"], [23.180265, 113.247332, "棠棠路德康路路口"], [23.195806, 113.226389, "石潭西路庆槎路路口"], [23.165368, 113.325932, "广州大道北沙河立交跨线桥上桥位南往北"], [23.174811, 113.22591, "内环路增槎放射线AB线分流点路段"], [23.119277, 113.230175, "广州市内环路珠江大桥东桥东往西"], [23.121319, 113.230251, "广州市内环路珠江大桥东桥西往东"], [23.095047, 113.255759, "内环路B线工业大道入口路口"], [23.170259, 113.467942, "开创大道与水西路交叉路口(南往北)"], [23.175201, 113.482068, "开创大道香雪三路路口"], [23.098059, 113.4671, "黄埔东路石化路口公交站路段"], [23.094361, 113.475011, "黄埔东路文冲船厂路段"], [23.33133, 113.543475, "知识大道凤湖四路路口"], [23.105015, 113.548267, "黄埔东路维也纳酒店路段"], [23.065521, 113.525861, "青年路往开发大道辅路入口路段"], [23.098488, 113.430846, "黄埔大道东鱼珠总站公交站附近路段"], [23.386436, 113.206845, "宝华路五华直街路口(东往西)"], [23.405487, 113.22226, "紫薇路天贵路路口(北向南)"], [23.401273, 113.222183, "迎宾大道天贵路路口"], [22.917821, 113.352155, "龙岐路福景路路口"], [22.937458, 113.338601, "禺山西路大富村路口"], [22.952318, 113.398966, "富怡路大龙中学北门路口"], [22.814149, 113.503946, "黄阁大道与大山衄路路口"], [22.823736, 113.512953, "黄阁大道与吉祥路路口东向西(来源广州南沙发布)"], [22.800742, 113.546291, "进港大道与金沙路路口北向南(来源广州南沙发布)"], [22.803098, 113.528668, "凤凰大道与进港大道路口东向西(来源广州南沙发布)"], [23.541552, 113.584194, "青云路凤仪路路口(北往南)"], [23.545735, 113.584953, "青云路蓝田路路口(北往南)"], [23.430572, 113.480008, "G105国道广从路太平路路口"], [23.545186, 113.592523, "街口大桥(西往东)"], [23.446412, 113.490758, "G105广从路工业大道路口"], [23.610037, 113.630553, "G105温泉大道-花卉大道路口"], [23.717847, 113.734906, "G105新城北路-良口镇政府路口"], [23.577894, 113.507383, "G355城鳌大道东新隅村路口"], [23.618691, 113.429287, "355城鳌大道西-前进路路口"], [23.666378, 113.412368, "G106龙潭大道-琶江路路口"], [23.11547, 113.619702, "新塘大道府前路路口(西往东)"], [23.284729, 113.844566, "增江大道东湖路口(东向西)"], [23.277904, 113.843896, "增江大道纬六路路口(北往南)"], [23.261951, 113.815961, "新城大道爱民路路口(北往南)"], [23.116389, 113.61481, "新塘大道解放北路路口(东往西)"], [23.128326, 113.603677, "港口大道汇太西路路口"], [23.178547, 113.590741, "新新大道民兵路路口(南往北)"], [23.269678, 113.817595, "新城大道欧亚公馆路口(北往南)"], [23.292481, 113.834572, "新桥路西园路路口"], [23.27629, 113.817594, "增城大道荔乡南路(西往东)"], [23.276005, 113.818687, "增城大道荔乡路路口(东往西)"], [23.228135, 113.827966, "新城大道郑田村路口(北往南)"], [23.226891, 113.828068, "新城大道郑田村路口(南往北)"], [23.294586, 113.817209, "荔城大道金竹大道路口(西往东)"], [23.294367, 113.817978, "荔城大道金竹大道路口(东往西)"], [23.292658, 113.826132, "荔城大道荔乡路路口(东往西)"], [23.292707, 113.825393, "荔城大道荔乡路路口(西往东)"], [23.292214, 113.828087, "荔城大道荔兴路路口(东往西)"], [23.292291, 113.827144, "荔城大道荔兴路路口(西往东)"], [23.289692, 113.792058, "荔城大道增城中学(北往南)"], [23.288725, 113.791305, "荔城大道增城中学(南往北)"], [23.116663, 113.614361, "新塘大道解放北路路口(北往南)"], [23.117313, 113.315268, "广州大道广州大道中隧道(南往北)"], [23.126971, 113.279324, "中山三路东濠涌高架底(西往东)"], [23.030347, 113.417763, "小谷围街金光隧道大学城入口(西往东)"], [23.030204, 113.417478, "小谷围街金光隧道大学城出口(南往北)"], [23.416706, 113.212008, "景天中路建设北路口(东往西)"], [23.408717, 113.208487, "建设北路加德士加油站路口(北往南)"], [23.377802, 113.196416, "云山大桥农新路上桥路段(西往东)"], [23.383648, 113.212659, "云山大桥农新路下桥路段(东往西)"], [23.378734, 113.199114, "云山大桥农新路付到上桥路段"], [23.168753, 113.252411, "三元里大道沙涌北牌坊路口(南往北)"], [23.168479, 113.252717, "三元里大道沙涌北牌坊路口(北往南)"], [23.268222, 113.296783, "G106南岭村路口(竹子园)(北往南)"], [23.295363, 113.350033, "太营路营东街(东往西)"], [23.175037, 113.331779, "沙太南路怡新路口(北往南)"], [23.095707, 113.245177, "洲头咀隧道路段"], [23.10172, 113.315978, "广州大道南友和路口(南往北)"], [23.101772, 113.315552, "广州大道南蕙兰路口(北往南)"], [23.176694, 113.250638, "三元里大道水边街路口(南往北)"], [23.13604, 113.347402, "中山大道西师大暨大BRT西往东"], [23.207222, 113.24197, "黄石西路石槎路口(东往西)"], [23.090928, 113.296978, "新港西路中大南门(西往东)"], [23.088163, 113.315779, "广州大道南交通警察支队海珠大队对出"], [23.082657, 113.315836, "广州大道南敦丰路路口"], [23.267889, 113.296381, "G106南岭村路口(竹子园)(南往北)"], [23.091035, 113.296607, "新港西路瑞康路路口"], [23.184176, 113.256272, "三元里大道棠新街路段(北往南)"], [23.175683, 113.236901, "西槎路横滘二路路口(北往南)"], [23.152933, 113.262919, "解放北路金桂园对出路段(北往南)"], [23.100585, 113.45591, "丰乐南路惠润广场路段"], [23.221711, 113.287596, "黄边北路广云路口(东往西)"], [23.100972, 113.44798, "港湾路城市更新展示中心路段"], [23.188344, 113.437806, "广汕公路长安街附近人行天桥南侧路段"], [23.215853, 113.313322, "同泰路进春辉路东760米南往北"], [23.215858, 113.31314, "同泰路进春辉路东760米北往南"], [23.124302, 113.393909, "中山大道车陂BRT路段(西往东)"], [23.101321, 113.454949, "黄埔东路丰乐路隧道西往东入口路段"], [23.100172, 113.447595, "黄埔东路港湾路隧道西往东入口路段"], [23.113416, 113.330729, "临江大道新中轴隧道(东往西)"], [23.084508, 113.524058, "黄埔东路开发大道路口"], [23.10594, 113.551155, "康南路东兴市场路段"], [23.101442, 113.456141, "黄埔东路丰乐路隧道东往西入口路段"], [23.100905, 113.449115, "黄埔东路港湾路入口路段"], [23.211824, 113.231718, "石井大道石井地铁站(北往南)"], [23.08357, 113.263751, "昌岗西路工业大道北路段"], [23.152119, 113.214521, "金沙洲大桥上桥入城处(东往西)"], [23.295298, 113.349799, "太营路营东街(西往东)"], [23.073587, 113.42224, "金洲北路华南师范大学附属中心路段(东往西)"], [23.07735, 113.29369, "东晓南新滘西路口隧道东往西"], [23.125082, 113.392382, "中山大道车陂路口:北向南"], [23.128407, 113.247494, "康王北路芦荻街路口(南往北)"], [22.831515, 113.3433, "蔡新路与广场路路口东向西(来源广州南沙发布)"], [22.703952, 113.597244, "龙穴大道与鸡抱沙北路路口北向南(来源广州南沙发布)"], [22.845261, 113.448439, "南沙大道与鱼窝头大道路口东向西(来源广州南沙发布)"], [23.146642, 113.249307, "环市西路与广园西路东向西"], [23.146379, 113.248952, "环市西路与广园西路西向东"], [22.937729, 113.338878, "禺山西路大富村路口(东往西)"], [23.146825, 113.261948, "解放北路大北立交隧道口(北往南)"], [23.146074, 113.261891, "解放北路大北立交隧道口(南往北)"], [23.193727, 113.247686, "棠棠路棠乐路路口(北往南)"], [23.191921, 113.337215, "沙太北路犀牛路路口"], [23.116201, 113.262754, "解放大桥北往南上桥位"], [23.188176, 113.247794, "棠棠路潭溪路路口(南往北)"], [23.188459, 113.248154, "棠棠路潭溪路路口(东往西)"], [23.210819, 113.231083, "石丰路石井地铁站(南往北)"], [23.211476, 113.23094, "白云湖大道石井地铁站(西往东)"], [23.211028, 113.231911, "白云湖大道石井地铁站(东往西)"], [23.099936, 113.448363, "港湾路黄埔供电局路段"], [23.164694, 113.500815, "荔红二路与开泰大道路口(北往南)"], [23.163647, 113.500676, "荔红二路与开泰大道路口(南往北)"], [23.164354, 113.500355, "荔红二路与开泰大道路口(西往东)"], [23.163909, 113.501251, "荔红二路与开泰大道路口(东往西)"], [23.099338, 113.46453, "黄埔东路万科城市之光对出"], [23.145531, 113.262342, "大北立交西往东"], [23.138095, 113.37656, "广园快速科韵路跨线桥南往北"], [23.100721, 113.448945, "黄埔东路港湾路隧道东往西入口路段"], [23.102257, 113.455245, "丰乐中路金隆园路段"], [23.073575, 113.42213, "金洲北路华南师范大学附属中心对面路段"], [23.16988, 113.376861, "华南御景园隧道(东往西)"], [23.169169, 113.379422, "华南御景园隧道(西往东)"], [23.118343, 113.560181, "广深大道西石窿大路(东往西)"], [23.117878, 113.558761, "广深大道西石窿大路(西往东)"], [23.101896, 113.237032, "珠江隧道南向北"], [23.244781, 113.348557, "大源中路康源医院门口南往北"], [23.151747, 113.221038, "增槎路上金沙洲大桥(南往北)"], [22.800739, 113.405419, "兴业路与豪岗大道路口西向东(来源南沙发布)"], [22.776618, 113.53485, "环市大道与广隆路路口东向西(来源南沙发布)"], [22.776688, 113.534503, "环市大道与广隆路路口西向东(来源南沙发布)"], [22.878362, 113.474689, "市南大道与三沙公路路口南向北(来源南沙发布)"], [22.87852, 113.474288, "市南大道与三沙公路路口北向南(来源南沙发布)"], [22.731824, 113.512662, "G228下横沥桥中国石油加油站路段南向北(来源南沙发布)"], [22.731758, 113.512585, "G228下横沥桥中国石油加油站路段北向南(来源南沙发布)"], [22.797153, 113.546016, "金隆路与金岭一横路路口北向南(来源南沙发布)"], [22.796983, 113.54612, "金隆路与金岭一横路路口南向北(来源南沙发布)"], [23.113466, 113.315122, "广州大桥北往南上桥位"], [23.118951, 113.32342, "珠江西路与花城大道交叉路口南向北"], [23.154201, 113.314415, "广州大道北濂泉路口北向南"], [23.145655, 113.314186, "广州大道中林和西横路口(北往南)"], [23.180955, 113.273103, "云城东体育馆路段(北往南)"], [23.180306, 113.272782, "云城东体育馆路段(南往北)"], [23.168805, 113.265872, "云城东路云城南一路(北往南)"], [23.170489, 113.266778, "云城东路云城南二路(北往南)"], [23.169939, 113.266665, "云城东路云城南二路(南往北)"], [23.168632, 113.260435, "机场路乐嘉路(北往南)"], [23.16824, 113.260713, "机场路乐嘉路(南往北)"], [23.141902, 113.273651, "下塘西路童心路(北往南)"], [23.141729, 113.27383, "下塘西路童心路(南往北)"], [23.157875, 113.207647, "金沙洲路环洲三路(北往南)"], [23.157328, 113.206967, "金沙洲路环洲三路(南往北)"], [23.147424, 113.242107, "西湾路站西路对出路段(南往北)"], [23.095497, 113.307845, "新港西路下渡路口(东往西)"], [23.095561, 113.312188, "客村立交高架入口路段(西往东)"], [23.142169, 113.241665, "环市西路西湾路口东往西"], [23.138377, 113.28108, "环市东路广东亚洲国际大酒店对出"], [23.164745, 113.277643, "大金钟路柯子岭路段(北往南)"], [23.137077, 113.261697, "解放北路过中山路高架桥"], [23.137027, 113.238618, "东风西路上桥位"], [23.136047, 113.241904, "高架桥上东往西"], [23.128564, 113.247386, "康王北路芦荻街路口(北往南)"], [23.164797, 113.277768, "大金钟路柯子岭路段(南往北)"], [23.141044, 113.313225, "水荫路小学对出(双向逆行)"], [23.141912, 113.241774, "环市西路西湾路口西往东"], [23.072858, 113.233209, "花地大道大笨象茶行(南往北)"], [23.074351, 113.23324, "花地大道大笨象茶行(北往南)"], [23.093102, 113.237096, "芳村大道东花蕾路跨线桥(西往东)"], [23.093401, 113.2376, "芳村大道东花蕾路跨线桥(东往西)"], [22.747838, 113.586175, "环市大道与凫洲大道路口西向东(来源南沙发布)"], [22.748006, 113.586718, "环市大道与凫洲大道路口东向西(来源南沙发布)"], [22.747198, 113.586666, "环市大道与凫洲大道路口南向北(来源南沙发布)"], [22.79583, 113.401644, "兴业路与繁荣路路口西向东(来源南沙发布)"], [22.796424, 113.401034, "兴业路与繁荣路路口东向西(来源南沙发布)"], [22.793186, 113.533565, "环市大道与双山大道路口西向东(来源南沙发布)"], [22.793179, 113.5344, "环市大道与双山大道路口东向西(来源南沙发布)"], [23.125245, 113.255216, "中山六路人民中路口(东往西)"], [23.111443, 113.296681, "二沙岛大通路(东往西)"], [23.111398, 113.296312, "二沙岛大通路(西往东)"], [23.13465, 113.30558, "环市东路479大院路段(东往西)"], [23.134471, 113.305587, "环市东路479大院路段(西往东)"], [23.126286, 113.273013, "中山四路转仓边路"], [23.125417, 113.265406, "中山五路教育路口(西往东)"], [23.131256, 113.258487, "盘福路市一医院上桥处"], [23.133838, 113.259279, "盘福立交上桥处"], [23.132317, 113.257152, "东风西路市一医院对出(西往东)"], [23.116368, 113.254423, "大德路诗书路路口(西往东)"], [23.144036, 113.261544, "解放北路兰圃路段(北往南)"], [23.199484, 113.283191, "云城东路蓝天新苑(南往北)"], [23.133301, 113.271691, "小北路仓边桥上桥处(北往南)"], [23.160453, 113.235084, "西槎路荔德路口(南往北)"], [23.160703, 113.234946, "西槎路荔德路口(北往南)"], [23.111708, 113.343119, "临江大道马场路口西往东"], [23.125331, 113.260506, "中山六路六榕路路口(东往西)"], [23.105802, 113.250306, "人民桥路段(南往北)"], [23.207343, 113.321997, "同泰路大陂西路路口"], [23.152898, 113.211381, "金沙洲路沙贝地铁站对出(西往东)"], [23.170941, 113.212818, "彩滨北路江悦湾路段(南往北)"], [23.171287, 113.212405, "彩滨北路江悦湾路段(北往南)"], [23.130892, 113.295238, "东风东路农林下路地铁站对出(西往东)"], [23.176633, 113.320507, "广州大道北怡新花园路段(南往北)"], [23.179912, 113.333269, "沙太中路元岗横路(东往西)"], [23.131238, 113.282783, "东风路广州市美术中学路段(东往西)"], [23.126321, 113.340073, "黄埔大道西高志大厦对出(西往东)"], [23.134674, 113.357089, "中山大道华景新城跨线桥(东往西)"], [23.116051, 113.288606, "海印大桥上桥位(北往南)"], [23.108771, 113.216288, "芳村大道西兴东路(南往北)"], [23.252691, 113.35416, "大源中路泰邦路口(南往北)"], [23.198333, 113.277703, "云城西岭南苑门口人行天桥(北往南)"], [23.198252, 113.277923, "云城西岭南苑门口人行天桥(南往北)"], [23.127431, 113.243107, "荔湾路陈家祠对出路段(北往南)"], [23.102536, 113.37371, "科韵路琶洲大桥上桥位路段(北往南)"], [23.138872, 113.235883, "环市西跨线桥上(南往北)"], [23.125452, 113.234387, "中山八路新虹街(西往东)"], [23.093824, 113.230251, "东激北路荣兴路路口(南往北)"], [23.096786, 113.239702, "芳村大道脑科医院对出(西往东)"], [23.091701, 113.243251, "芳村大道东信联路路口(南往北)"], [23.125579, 113.234684, "中山八路新虹街(东往西)"], [23.129219, 113.271297, "越华路仓边路路口"], [23.137758, 113.233928, "环市西跨线桥上(北往南)"], [23.095962, 113.333865, "新港中路与江海大道路口(东往西)"], [23.108744, 113.216073, "芳村大道西兴东路(北往南)"], [23.123748, 113.359522, "黄埔大道中东璟花园上桥位"], [23.095925, 113.332881, "新港中路与江海大道路口(西往东)"], [23.102644, 113.373866, "科韵路琶洲大桥上桥位路段(南往北)"], [23.197387, 113.28677, "白云大道外语立交(北往南)"], [23.107875, 113.54979, "黄埔东路榕悦花园(北往南)"], [23.125737, 113.249356, "康王中路第四中学对出路段(东向西)"], [23.020532, 113.33363, "番禺区迎宾路涌口村天桥路段(南往北)"], [23.209918, 113.263761, "机场路联和公园对出(南往北)"], [23.136509, 113.333589, "天河东路国德大厦对出路段(北往南)"], [23.145143, 113.378574, "科韵北路慈惠医院对出(南往北)"], [23.072282, 113.214053, "增南路与龙溪大道(东往西)"], [23.197405, 113.28666, "白云大道外语立交(南往北)"], [23.106757, 113.343207, "阅江路磨碟沙隧道东入口路段(东往西)"], [23.132681, 113.33436, "天河路天河东路路口(南往北)"], [23.10401, 113.368942, "阅江中路与会展东路路口(东往西)"], [23.336869, 113.294483, "G106方华路口(东往西)"], [23.337145, 113.29398, "G106方华路口(西往东)"], [23.114903, 113.248032, "康王路隧道(北往南)"], [23.114077, 113.248386, "康王路隧道(南往北)"], [23.103867, 113.368103, "阅江中路与会展东路路口(西往东)"], [23.098805, 113.355114, "南风东路与新港东路路口(东往西)"], [23.098594, 113.356452, "南风东路与新港东路路口(西往东)"], [23.199211, 113.282867, "云城东路蓝天新苑(北往南)"], [23.106644, 113.343186, "阅江路磨碟沙隧道东入口路段(西往东)"], [23.111153, 113.278964, "江湾路江湾桥上桥位(南往北)"], [23.111203, 113.278848, "江湾路江湾桥下桥位(北往南)"], [23.132759, 113.254345, "东风西路德坭高架(东往西)"], [23.132657, 113.254083, "东风西路德坭高架(西往东)"], [23.11623, 113.262882, "解放大桥南往北上桥位"], [23.202685, 113.266255, "黄石东路黄石立交上桥位(东往西)"], [23.208095, 113.237223, "白云湖大道石潭西路路口(东往西)"], [23.208172, 113.236874, "白云湖大道石潭西路路口(西往东)"], [23.125514, 113.265368, "中山五路教育路口(东往西)"], [23.129129, 113.2655, "吉祥路越华路路口(逆行)(北往南)"], [23.138113, 113.3216, "体育西路天河大厦路段(北往南)"], [23.137686, 113.321687, "体育西路天河大厦路段(南往北)"], [23.122709, 113.364297, "黄埔大道天府路跨线桥(东往西)"], [23.117136, 113.35344, "花城大道潭村隧道(西往东)"], [23.117214, 113.351186, "花城大道潭村隧道(东往西)"], [23.119702, 113.375534, "黄埔大道科韵路立交上桥处(东往西)"], [23.127603, 113.319753, "黄埔大道保利中景大厦对出路段(西往东)"], [23.124412, 113.254229, "人民中路光塔路路口(北往南)"], [23.146332, 113.346425, "广园快速五山跨线桥路段(南往北)"], [23.2305, 113.215833, "鸦岗大道白云湖大道路口(东往西)"], [23.230685, 113.216077, "鸦岗大道白云湖大道路口(西往东)"], [23.377779, 113.194642, "农新路中石化加油站路段(东往西)"], [23.110844, 113.264389, "解放大桥"], [23.171215, 113.467962, "开创大道与水西路交叉路口(北往南)"], [23.170423, 113.467294, "开创大道与水西路交叉路口(西往东)"], [23.171053, 113.468607, "开创大道与水西路交叉路口(东往西)"], [23.22527, 113.288171, "尖彭路广云路跨线桥(西往东)"], [23.126173, 113.230287, "珠江大桥东往西上桥位"], [23.210558, 113.329163, "同和路华南快速跨线桥路段(北往南)"], [23.126184, 113.230074, "中山八"], [23.124679, 113.230201, "中山八立交桥底"], [23.144153, 113.216733, "广佛大桥往金沙洲方向"], [23.132534, 113.256948, "广州国际金融大厦对出路段(东往西)"], [23.073563, 113.25042, "芳村大道南鹤洞东地铁站(南往北)"], [23.210187, 113.329331, "同和路华南快速跨线桥路段(南往北)"], [23.300242, 113.231652, "夏花三路塘贝路路口(南往北)"], [23.300456, 113.231626, "夏花三路塘贝路路口(北往南)"], [23.138874, 113.215299, "沿江路广佛大桥(南往北)"], [23.115716, 113.232192, "黄沙大道多宝路路口(南往北)"], [23.373827, 113.210769, "新华路建设路口(东往西)"], [23.454161, 113.184022, "南航大道康健路口(北往南)"], [23.376272, 113.10344, "G107线合进大道路口(西往东)"], [23.433515, 113.271873, "花都大道花山大道路口(西往东)"], [23.42668, 113.42557, "S118线北兴小学路口(东往西)"], [23.380155, 113.238522, "凤凰南路邝村东路口(北往南)"], [23.372578, 113.207761, "新华路花都区老年大学路段(西往东)"], [23.541333, 113.584242, "青云路凤仪路路口(南往北)"], [23.545511, 113.585016, "青云路蓝田路路口(南往北)"], [23.544726, 113.594431, "街口大桥(东往西)"], [23.261074, 113.816018, "新城大道爱民路路口(南往北)"], [23.277334, 113.84407, "增江大道纬六路路口(南往北)"], [23.206946, 113.247705, "棠棠路黄石西路路口(南往北)"], [23.139341, 113.374438, "广园快速路科韵路南行匝道入口"], [23.236291, 113.308411, "永平隧道荟贤路路口(北往南)"], [23.172239, 113.659809, "荔新大道(东往西)"], [23.026082, 113.31064, "富石路与朝阳西路交叉口(北往南)"], [23.207428, 113.248015, "棠棠路黄石西路路口(东往西)"], [22.951316, 113.378651, "东环路德兴北路路口(西往东)"], [23.026739, 113.316287, "朝阳东路建华路路口(东往西)"], [23.131289, 113.277647, "东濠涌高架东风路路段(南往北)"], [22.937902, 113.393023, "市莲路广华路路口(东往西)"], [22.93776, 113.392371, "市莲路广华路路口(西往东)"], [22.909293, 113.350369, "中华大道西环路路口(西往东)"], [23.125391, 113.223456, "珠江大桥东桥(西往东)"], [23.125737, 113.226909, "珠江大桥东桥(东往西)"], [23.124125, 113.254175, "人民中路美国银行中心对出路段"], [23.041872, 113.301044, "吉祥北道吉祥道交叉口(东往西)"], [23.104202, 113.46908, "石化路大沙东路口(北往南)"], [23.10655, 113.454003, "大沙东路丰乐北路口(东往西)"], [23.529712, 113.587867, "江湾路-海塱东路西往东"], [23.529533, 113.588087, "江湾路-海塱东路东往西"], [23.375885, 113.215301, "新华路花城路口(东往西)"], [23.380236, 113.213603, "花城路秀全大道路口(北往南)"], [23.384369, 113.201965, "宝华路宝华隧道路段(东往西)"], [23.415902, 113.198477, "三东大道大运摩托车公司路段(西往东)"], [23.401177, 113.223742, "迎宾大道正盛红谷路段(西往东)"], [23.388114, 113.216098, "茶园路购书中心路段(北往南)"], [23.4529, 113.183907, "南航大道合成市场二街路口(南往北)"], [23.456054, 113.14032, "培正北路军田市场路段(东往西)"], [23.477052, 113.177036, "山前大道宝峰北路口(西往东)"], [23.411525, 113.093719, "培正大道新赤公路口(北往南)"], [23.388792, 113.078986, "赤坭大道文化广场路口(西往东)"], [23.338261, 113.111117, "花都大道炭步大桥路段(南往北)"], [23.373808, 113.134017, "风神大道东风大道路口(北往南)"], [23.496068, 113.290186, "山前大道菊花石大道路口(南往北)"], [23.456368, 113.322055, "桑梓北路大东村路段(南往北)"], [23.435609, 113.300582, "花都大道天和2桥路段(西往东)"], [23.423343, 113.187961, "花都大道茶碑路口(南往北)"], [23.416138, 113.189556, "永发大道茶碑路口(北往南)"], [23.396503, 113.171709, "迎宾大道红棉大道路口(南往北)"], [23.381296, 113.247764, "迎宾大道镜湖隧道路段(西往东)"], [23.358531, 113.219242, "雅源南路镇前路口(南往北)"], [23.370294, 113.125781, "G107车城大道路口(西往东)"], [23.222056, 113.287352, "广云路黄边北路口(北往南)"], [23.218438, 113.269442, "鹤龙一路鹤龙东路口(南往北)"], [23.219016, 113.269555, "鹤龙一路鹤龙东路口(北往南)"], [23.217973, 113.285052, "广云路鹤龙东路口(北往南)"], [23.170269, 113.367237, "华观路长兴路口(南往北)"], [23.157348, 113.364614, "华南东侧路"], [23.162752, 113.364838, "华南东侧路"], [23.165927, 113.365097, "华南东侧路"], [23.231446, 113.275448, "鹤龙二路百花岭北街路口(南往北)"], [23.179524, 113.267309, "云城西路(云城西路隧道入口南往北)"], [23.17022, 113.37459, "华南御景园隧道出口(东往西)"], [23.190627, 113.273318, "云城西路(云城西路隧道入口北往南)"], [23.134571, 113.309882, "环市东路水荫路口(东往西)"], [23.221164, 113.287074, "广云路黄边北路口(南往北)"], [23.133469, 113.230241, "南岸路河柳街路口(北往南)"], [23.077831, 113.330992, "龙潭立交新滘中路(西往东)"], [23.134422, 113.295451, "环市东路农林下路口(西往东)"], [23.184751, 113.325394, "广州大道北京溪路口(北往南)"], [23.126952, 113.28382, "中山三路较场西路口(西往东)"], [23.115345, 113.620286, "新塘大道府前路路口(东往西)"], [23.115223, 113.619907, "新塘大道府前路路口(南往北)"], [23.115721, 113.620045, "新塘大道府前路路口(北往南)"], [23.116012, 113.614527, "新塘大道解放北路路口(南往北)"], [23.178707, 113.590216, "新新大道民兵路路口(西往东)"], [23.1099, 113.23797, "黄沙大道珠江隧道入口(西往东)"], [23.170717, 113.262436, "云城西路隧道(北往南)"], [23.268685, 113.324869, "广从二路辅道龙兴西路口(北往南)"], [23.204127, 113.28024, "黄石东路广云路口(东往西)"], [23.186792, 113.276318, "云城东路隧道(南往北)"], [23.230001, 113.27353, "鹤龙二路尖彭路口(北往南)"], [23.131717, 113.261574, "东风解放高架路段(西往东)"], [23.155332, 113.270823, "下塘西路高架桥上桥位(西往东)"], [23.320948, 113.357299, "大罗罗龙路大罗蔬菜市场对出(东向西)"], [23.275338, 113.35606, "大源北路长盛产业园路口(北往南)"], [23.133267, 113.406406, "大观南路广园快速路跨线桥上桥位(北往南)"], [23.147449, 113.406903, "大观中路奥体路口(北往南)"], [23.204228, 113.278967, "黄石东路广云路口(西往东)"], [23.290631, 113.358109, "太和中路大源派出所路口(南往北)"], [23.290987, 113.357796, "太和中路大源派出所路口(北往南)"], [23.380661, 113.410089, "广从七路福龙路口(南往北)"], [23.384066, 113.393144, "广龙路钟联路口(南往北)"], [23.384378, 113.392912, "广龙路钟联路口(北往南)"], [23.384378, 113.392912, "广龙路钟联路口(北往南)"], [23.323251, 113.353208, "大罗罗龙路大罗村路段(东往西)"], [23.29442, 113.307283, "北太路侨发路口(东往西)"], [23.294206, 113.306455, "北太路侨发路口(西往东)"], [23.145349, 113.314443, "广州大道中林和西横路口(南往北)"], [23.149514, 113.32603, "林和中路(林和中路隧道南往北)"], [23.141384, 113.314598, "广州大道中天河北路口(北往南)"], [23.140208, 113.314899, "广州大道中天河北路口(南往北)"], [23.137534, 113.415035, "奥体路奥体东门对出路段(南往北)"], [23.140948, 113.332923, "广州大道中天河北隧道入口(南往北)"], [23.133949, 113.328222, "体育东路天河路口(北往南)"], [23.135656, 113.342619, "天河路五山路口(东往西)"], [23.135472, 113.340971, "天河路五山路口(西往东)"], [23.076002, 113.213726, "龙溪中路增南路口(东往西)"], [23.068627, 113.200741, "龙溪大道花博园路口(西往东)"], [23.069225, 113.20177, "龙溪大道花博园路口(东往西)"], [23.081958, 113.238798, "浣花路花湾路口(南往北)"], [23.08219, 113.239087, "浣花路花湾路口(东向西)"], [23.125407, 113.253555, "中山七路光复路口(东往西)"], [23.125341, 113.25276, "中山七路光复路口(西往东)"], [23.115932, 113.207853, "芳村大道西滘口客运站对出(西往东)"], [23.069818, 113.236976, "鹤洞路崇文五路口(东往西)"], [23.091427, 113.229561, "东漖北路茶滘市场路口(南往北)"], [23.091611, 113.229541, "东漖北路茶滘市场路口(北往南)"], [23.154585, 113.320966, "禺东西路广园快速路口(出城方向)(西往东)"], [23.131261, 113.418664, "天茂路黄村立交上桥位(北往南)"], [23.108662, 113.240432, "黄沙大道六二三路口(西往东)"], [23.108837, 113.240552, "黄沙大道六二三路口(东往西)"], [23.144979, 113.246626, "环市西路91号对出人行天桥(西往东)"], [23.093441, 113.399852, "新港东路新通路口(西往东)"], [23.135912, 113.287858, "环市东路东方国际广场对出路段(西往东)"], [23.097664, 113.388077, "新港东路杨青路口(东往西)"], [23.118621, 113.379424, "黄埔大道国际金融中心对出路段(西往东)"], [23.127442, 113.30732, "中山一路梅东路口(西往东)"], [23.128663, 113.414439, "广园快速路黄村立交上桥位(西往东)"], [23.239612, 113.345818, "黄庄南路沙太货运市场对出路口(南往北)"], [23.240866, 113.346443, "黄庄南路沙太货运市场对出路口(北往南)"], [23.171809, 113.260253, "机场路政务中心对出路段(南往北)"], [23.171798, 113.260029, "机场路政务中心对出路段(北往南)"], [23.093012, 113.288117, "新港西路江南新苑对出(西往东)"], [23.097466, 113.387207, "新港东路杨青路口(西往东)"], [23.049564, 113.342556, "南洲路华快桥底路口(东往西)"], [23.061743, 113.320137, "南洲路罗马家园路口(东往西)"], [23.131301, 113.268609, "东风中路正南路口东往西"], [23.131176, 113.268602, "东风中路正南路口西往东"], [23.177309, 113.266744, "云城南四路云城西路隧道入口(南往北)"], [23.177838, 113.265319, "云城南四路云城西路隧道入口(北往南)"], [23.186827, 113.276302, "云城东路(云城东路隧道入口南往北)"], [23.191366, 113.278692, "云城东路(云城东路隧道入口北往南)"], [23.137846, 113.407552, "车陂路(车陂路隧道出口南往北)"], [23.140358, 113.406151, "车陂路(车陂路隧道出口北往南)"], [23.130913, 113.334035, "天河东路(天河东隧道南往北)"], [23.133946, 113.334092, "天河东路(天河东隧道南往北)"], [23.142261, 113.332564, "天河东路天河北路隧道(北往南)"], [23.132717, 113.398838, "广园快速路车陂立交上桥位(东往西)"], [23.130637, 113.407183, "广园快速路黄村地铁站对出路段(东往西)"], [23.130901, 113.405257, "广园快速路黄村地铁站对出路段(西往东)"], [23.117174, 113.374313, "科韵路黄埔大道隧道出口(北往南)"], [23.124137, 113.358278, "黄埔大道员村山顶路段(东往西)"], [23.123945, 113.35822, "黄埔大道员村山顶路段(西往东)"], [23.121767, 113.367442, "黄埔大道棠石路口(东往西)"], [23.127171, 113.421357, "广园快速路黄村立交上桥位(东往西)"], [23.159589, 113.364412, "岳洲路华农隧道出口(东往西)"], [23.159533, 113.366145, "汇景北路华农隧道出口(西往东)"], [23.125779, 113.347319, "黄埔大道马场路隧道出口(西往东)"], [23.149738, 113.348417, "五山路华工隧道出口(南往北)"], [23.148911, 113.347608, "五山路华工隧道出口(北往南)"], [23.134192, 113.311945, "天河路天河立交四层上桥位(西往东)"], [23.134797, 113.293103, "环市东路区庄立交底层(西往东)"], [23.134955, 113.294052, "环市东路区庄立交底层(东往西)"], [23.169125, 113.261416, "云城西路穿机场路隧道入口(北往南)"], [23.156037, 113.263564, "机场路机场立交上桥位(南往北)"], [23.195706, 113.285394, "白云大道南云山隧道入口(北往南)"], [23.16606, 113.260607, "机场路穿广园西路隧道入口(北往南)"], [23.165774, 113.261036, "机场路穿广园西路隧道入口(南往北)"], [23.081309, 113.33205, "江海大道龙潭立交(北往南)"], [23.087224, 113.374007, "科韵南路新滘东路路口隧道入口(南往北)"], [23.087207, 113.373877, "科韵南路新滘东路路口隧道出口(北往南)"], [23.130795, 113.291053, "东风东路执信路口(西往东)"], [23.061603, 113.319755, "南洲路罗马家园路口(西往东)"], [23.131345, 113.31547, "广州大道中天河立交上桥位(南往北)"], [23.120265, 113.372673, "黄埔大道科韵路立交上桥位(西往东)"], [23.127116, 113.407117, "大观南路广园快速路跨线桥上桥位(南往北)"], [23.143565, 113.415084, "奥体路奥体东门对出路段(北往南)"], [23.142735, 113.40648, "大观路奥体中心正门路段(南往北)"], [23.143111, 113.406353, "大观路奥体中心正门路段(北往南)"], [22.943886, 113.385358, "番禺大道北跨线桥(南往北)"], [22.941878, 113.385585, "番禺大道区府高架桥城中学对出上桥位(北往南)"], [23.27525, 113.30306, "鹤龙三路龙兴西路路口(南往北)"], [23.275842, 113.303086, "鹤龙三路龙兴西路路口(北往南)"], [23.191581, 113.366762, "天源路迎龙路口西往东"], [23.26145, 113.323226, "广从公路(北往南)"], [23.193317, 113.370221, "天源路龙洞东路口东往西"], [23.19306, 113.369869, "天源路龙洞东路口西往东"], [23.144015, 113.242354, "西湾路(北往南)"], [23.164889, 113.241847, "同德围南北高架下桥位(北往南)"], [23.225487, 113.300827, "集贤路岭云路口东往西"], [23.158734, 113.242782, "同德围南北高架上下桥位(南往北)"], [23.161273, 113.279916, "大金钟路大金钟高架往广园中路方向北往南"], [23.227378, 113.301536, "集贤路集安街路口东往西"], [23.221055, 113.30333, "同泰路永泰新村口东往西"], [23.062914, 113.254786, "东沙大道环翠北路口北往南"], [23.1243, 113.343392, "马场路海安路口北往南"], [23.2209, 113.303282, "同泰路永泰新村口西往东"], [23.198167, 113.326014, "广州大道北同和地铁站对出(南往北)"], [23.201674, 113.324775, "同泰路倚绿北街路口南往北"], [23.201364, 113.324722, "同泰路倚绿北街路口北往南"], [23.077964, 113.319627, "新滘中路大塘地铁站天桥处(东往西)"], [23.163836, 113.261542, "机场路怡发广场路段(北往南)"], [23.161441, 113.25848, "广园西穿广园中路隧道(南往北)"], [23.15871, 113.266102, "广园中路松柏东街路口西往东"], [23.185008, 113.257975, "三元里大道棠安路口南往北"], [23.130967, 113.29192, "东风东路执信路口(东往西)"], [23.24834, 113.291967, "空港大道(北往南)"], [23.247905, 113.292179, "空港大道(南往北)"], [23.075924, 113.228586, "龙溪大道跨线桥上桥位(西往东)"], [23.075978, 113.228449, "龙溪大道跨线桥下桥位(东往西)"], [23.235748, 113.280808, "鹤龙二路望岗塘田街路口南往北"], [23.070313, 113.280361, "工业大道南新滘西路口南往北"], [23.045313, 113.215928, "花地大道南沙尾桥北往南"], [23.093348, 113.400675, "新港东路新通路口(东往西)"], [23.154887, 113.251249, "广园西路瑶台西街路口北往南"], [23.154739, 113.251495, "广园西路瑶台西街路口南往北"], [23.12192, 113.321317, "华夏路华明路口南往北"], [23.138057, 113.281823, "环市东路中环广场对出路段西往东"], [23.201807, 113.284551, "黄石东路西派云峰对出路段(西往东)"], [23.155364, 113.213969, "环洲二路彩滨中路口北往南"], [23.212918, 113.228774, "白云湖大道(东往西)"], [23.104274, 113.31693, "艺洲路友邻一路路口西往东"], [22.97691, 113.352384, "新光快速出口(北往南)"], [23.132853, 113.334159, "天河东路(天河东隧道北往南)"], [23.2381, 113.2819, "鹤龙二路望岗陈屋墙街路口南往北"], [23.088183, 113.315998, "广州大道南858号路段南往北"], [23.237851, 113.290917, "空港大道望岗大马路口南往北"], [23.25469, 113.295522, "均禾大道长碰坑背工业街路口西往东"], [23.253242, 113.299952, "均禾大道上村中街路口西往东"], [23.131863, 113.302897, "东风东路福今路路口(东往西)"], [23.13546, 113.28939, "环市东路华侨新村路段(西往东)"], [23.247778, 113.3043, "均禾大道新科上村田顶大街路口东往西"], [23.137116, 113.272924, "小北路越秀北路口南往北"], [23.13722, 113.272853, "小北路越秀北路口北往南"], [23.056502, 113.355031, "小洲东路瀛洲路口东往西"], [23.090131, 113.21627, "穗盐路葵蓬路路口(西往东)"], [23.156202, 113.316293, "广州大道北沙河立交跨线桥上桥位北往南"], [23.159028, 113.214147, "环洲三路彩滨中路口南往北"], [23.206951, 113.249521, "黄石西路小坪立交榕溪出口东往西"], [23.238986, 113.290748, "空港大道望岗大马路口北往南"], [23.243845, 113.290931, "空港大道松园路口(北往南)"], [23.243036, 113.290952, "空港大道松园路口(南往北)"], [23.119618, 113.32328, "花城汇隧道"], [23.163425, 113.259812, "机场路广园西路(南往北)"], [23.184138, 113.279996, "白云大道南云山隧道入口南往北"], [23.267795, 113.292044, "空港大道(南往北)"], [23.161285, 113.242369, "同德围南北高架"], [23.159529, 113.242924, "同德围南北高架"], [23.159504, 113.243022, "同德围南北高架"], [23.244948, 113.286142, "鹤龙二路均禾大道路口南往北"], [23.256148, 113.271738, "均禾大道清湖牌坊对出路段(东往西)"], [23.255954, 113.271374, "均禾大道清湖牌坊对出路段(西往东)"], [23.20237, 113.263579, "机场路黄石立交上桥位南往北"], [23.362941, 113.289349, "迎宾大道矮岗北街路口西往东"], [23.363031, 113.289895, "迎宾大道矮岗北街路口东往西"], [23.360214, 113.301359, "迎宾大道空港南二路口西往东"], [23.360292, 113.301985, "迎宾大道空港南二路口东往西"], [23.227696, 113.301217, "集贤路集安街路口北往南"], [23.252728, 113.28996, "空港大道新科新村路口南往北"], [23.25298, 113.289872, "空港大道新科新村路口北往南"], [23.125512, 113.267399, "中山五路广大路口西往东"], [23.126329, 113.287025, "中山二路中山东川路口东往西"], [23.122533, 113.321155, "华夏路华明路口北往南"], [23.118919, 113.416933, "汇彩北路中山大道路口北往南"], [23.118105, 113.416739, "汇彩路中山大道路口南往北"], [23.133376, 113.362332, "中山大道西天府路口南往北"], [23.191817, 113.366658, "大源路迎龙路口东往西"], [23.169818, 113.317962, "广州大道北银利街路口北往南"], [23.156126, 113.309232, "广园东路濂泉路口西往东"], [23.106931, 113.217974, "芳村大道西区政府路口西往东"], [23.082354, 113.209998, "水秀一路花涧五街路口西往东"], [23.082427, 113.210401, "水秀一路花涧五街路口东往西"], [23.076013, 113.213371, "龙溪中路增南路口北往南"], [23.142785, 113.242258, "环市西路西湾路口北往南"], [23.077954, 113.322331, "新滘中路大塘地铁站D出口东往西"], [23.077801, 113.322335, "新滘中路大塘地铁站D出口西往东"], [23.102406, 113.307797, "滨江东路转上渡路口西往东"], [23.07792, 113.29823, "新滘西路风康路口东往西"], [23.106553, 113.219, "芳村大道西区政府路口东往西"], [23.100114, 113.23287, "芳村大道中东激北路口东往西"], [23.078504, 113.250663, "鹤洞大桥西下桥口(东往西)"], [23.136735, 113.294899, "先烈南路区庄立交项层上桥位北往南"], [23.113748, 113.323434, "新中轴隧道西入口西往东"], [23.12726, 113.375246, "科韵路中山大道隧道出口北往南"], [23.127526, 113.375508, "科韵路中山大道隧道出口南往北"], [23.168461, 113.330691, "广州大道北沙河立交跨线桥上桥位北往南"], [23.077111, 113.235465, "龙溪大道龙溪立交桥西往东"], [23.077215, 113.235416, "龙溪大道龙溪立交桥东往西"], [23.091216, 113.373646, "科韵南路黄埔涌大桥上桥位南往北"], [23.120915, 113.33351, "猎德大道花城大道隧道出口北往南"], [23.145167, 113.246499, "环市西路91号对出人行天桥(东往西)"], [23.15205, 113.357894, "五山路(西往东)"], [23.15222, 113.355807, "五山路(东往西)"], [23.105231, 113.251895, "滨江西路洪德路段东往西"], [23.178121, 113.259353, "机场路康雅花园对出至岗贝路口北往南"], [23.162163, 113.262223, "机场路机场立交上桥位北往南"], [23.105077, 113.251695, "滨江西路洪德路段西往东"], [23.124898, 113.389943, "天朗明居brt(东往西)"], [23.125312, 113.383933, "中山大道西棠东BRT西往东"], [23.179297, 113.251211, "三元里大道德康路路口(西往东)"], [23.17934, 113.251533, "三元里大道德康路路口(东往西)"], [23.277644, 113.327808, "广从公路(北往南)"], [23.265023, 113.324241, "广从公路(南往北)"], [23.254753, 113.319969, "广从一路(南往北)"], [23.234554, 113.29713, "新顺路百顺南路口北往南"], [23.077382, 113.269209, "工业大道(西往东)"], [23.076506, 113.270462, "工业大道中广纸北一路口南往北"], [23.209572, 113.234188, "白云湖大道石井中学天桥下(西往东)"], [23.209642, 113.234227, "白云湖大道石井中学天桥下(东往西)"], [23.12438, 113.396515, "中山大道中车陂BRT路口西往东"], [23.166738, 113.415414, "大观中路(南往北)"], [23.204962, 113.280156, "广云路云城西路口北往南"], [23.26802, 113.325104, "广从二路辅道龙兴西路口(东往西)"], [23.164132, 113.261599, "机场路怡发广场路段(南往北)"], [23.233085, 113.306501, "白云大道北永平隧道人口(南往北)"], [23.240936, 113.311865, "白云大道北永平隧道人口(北往南)"], [23.194196, 113.365406, "迎龙路(北往南)"], [23.186813, 113.363556, "天源路(西往东)"], [23.17885, 113.350058, "天源路长湴站地铁站(西往东)"], [23.179114, 113.3499, "天源路长湴站地铁站(东往西)"], [23.193445, 113.399003, "广汕二路柯木塱地铁天桥下(东往西)"], [23.1932, 113.398927, "广汕二路柯木塱地铁天桥下(西往东)"], [23.135623, 113.35035, "中山大道师大暨大BRT站(西往东)"], [23.120677, 113.333746, "猎德大道花城大道隧道出口南往北"], [23.12326, 113.326232, "金穗路隧道(西往东)"], [23.077788, 113.319643, "新滘中路大塘地铁站天桥处(西往东)"], [23.252336, 113.302761, "均禾大道武警指挥学院路口东往西"], [23.24788, 113.304045, "均禾大道文盛庄路路口(北往南)"], [23.246783, 113.308256, "均禾大道东平中路(西往东)"], [23.270031, 113.318969, "龙兴西路永兴酒店路口(东往西)"], [23.269961, 113.31895, "龙兴西路永兴酒店路口(西往东)"], [23.120362, 113.302235, "寺右新马路达道路(南往北)"], [23.149643, 113.208378, "沙凤一路环洲二路口北往南"], [23.1174, 113.343666, "花城大道马场路(西往东)"], [23.117208, 113.34327, "花城大道马场路(北往南)"], [23.145509, 113.314613, "广州大道中林和西横路口(东往西)"], [23.138814, 113.315078, "广州大道水荫南路(南往北)"], [23.138799, 113.314909, "广州大道水荫南路(北往南)"], [23.275511, 113.304481, "鹤龙三路龙兴西路口东往西"], [23.065443, 113.291694, "工业大道江南大道(西往东)"], [23.138099, 113.27757, "北较场路北较场横路口北往南"], [23.278985, 113.328944, "广从二路(北往南)"], [23.278916, 113.329038, "广从二路(南往北)"], [23.293462, 113.822726, "荔城街荔城大道荔景大道路口东往西"], [23.293538, 113.821587, "荔城街荔城大道荔景大道路口西往东"], [23.292983, 113.822249, "荔城街荔城大道荔景大道路口南往北"], [23.293985, 113.822012, "荔城街荔城大道荔景大道路口北往南"], [23.294069, 113.817587, "荔城街荔城大道金竹大道路口南往北"], [23.295511, 113.80412, "荔城街荔城大道荔星大道路口东往西"], [23.295018, 113.803138, "荔城街荔城大道荔星大道路口西往东"], [23.294914, 113.803761, "荔城街荔城大道荔星大道路口南往北"], [23.295619, 113.80345, "荔城街荔城大道荔星大道路口北往南"], [23.285362, 113.81227, "荔城街府佑路金竹大道路口东往西"], [23.285566, 113.81133, "荔城街府佑路金竹大道路口西往东"], [23.285061, 113.811571, "荔城街府佑路金竹大道路口南往北"], [23.285851, 113.812013, "荔城街府佑路金竹大道路口北往南"], [23.28624, 113.834204, "荔城街光明西路夏街大道路口东往西"], [23.286263, 113.833928, "荔城街光明西路夏街大道路口西往东"], [23.286139, 113.834104, "荔城街光明西路夏街大道路口南往北"], [23.28639, 113.834049, "荔城街光明西路夏街大道路口北往南"], [23.282833, 113.817326, "荔城街荔景大道府佑路路口东往西"], [23.283168, 113.816157, "荔城街荔景大道府佑路路口西往东"], [23.282421, 113.816444, "荔城街荔景大道府佑路路口南往北"], [23.283595, 113.816983, "荔城街荔景大道府佑路路口北往南"], [23.280715, 113.821541, "荔城街府佑路荔乡路口东往西"], [23.281028, 113.820432, "荔城街府佑路荔乡路口西往东"], [23.280478, 113.820898, "荔城街府佑路荔乡路口南往北"], [23.28128, 113.821239, "荔城街府佑路荔乡路口北往南"], [23.291933, 113.830449, "荔城街荔城大道沙园路路口北往南"], [23.291212, 113.830434, "荔城街荔城大道园圃路路口南往北"], [23.291639, 113.830798, "荔城街荔城大道挂绿路路口东往西"], [23.291614, 113.829924, "荔城街荔城大道新桥路路口东往西"], [23.292461, 113.827729, "荔城街荔城大道开园路路口北往南"], [23.291943, 113.82766, "荔城街荔城大道荔兴路路口南往北"], [23.29289, 113.825822, "荔城街荔城大道菜园路路口北往南"], [23.292384, 113.82578, "荔城街荔城大道荔乡路路口南往北"], [23.302952, 113.822957, "荔城街增派大道御景路路口东往西"], [23.302884, 113.82218, "荔城街增派大道御景路路口西往东"], [23.302666, 113.822548, "荔城街增派大道御景路路口南往北"], [23.303205, 113.822584, "荔城街增派大道御景路路口北往南"], [23.310126, 113.829942, "荔城街增派路开园中路路口南往北"], [23.310632, 113.829945, "荔城街增派路开园中路路口北往南"], [23.293303, 113.830985, "荔城街沙园路城丰路路口南往北"], [23.29357, 113.830999, "荔城街沙园路城丰路路口北往南"], [23.294078, 113.82842, "荔城街开园路城丰路路口南往北"], [23.294403, 113.828398, "荔城街开园路城丰路路口北往南"], [23.27651, 113.818455, "荔城街增城大道荔乡路路口北往南"], [23.274592, 113.821357, "荔城街增城大道夏街大道路口东往西"], [23.274909, 113.820394, "荔城街增城大道夏街大道路口西往东"], [23.27432, 113.820685, "荔城街增城大道夏街大道路口南往北"], [23.275122, 113.820994, "荔城街增城大道夏街大道路口北往南"], [23.278062, 113.814553, "荔城街增城大道荔景大道路口东往西"], [23.278551, 113.813097, "荔城街增城大道荔景大道路口西往东"], [23.277599, 113.813478, "荔城街增城大道荔景大道路口南往北"], [23.278924, 113.814046, "荔城街增城大道荔景大道路口北往南"], [23.288072, 113.826807, "荔城街光明西路荔兴路路口东往西"], [23.288136, 113.826324, "荔城街光明西路荔兴路路口西往东"], [23.287903, 113.826557, "荔城街光明西路荔兴路路口南往北"], [23.288302, 113.826554, "荔城街光明西路荔兴路路口北往南"], [23.264293, 113.808177, "荔湖街荔新路爱民大道路口东往西"], [23.264584, 113.80712, "荔湖街荔新路爱民大道路口西往东"], [23.264014, 113.807645, "荔湖街荔新路爱民大道路口南往北"], [23.26482, 113.807637, "荔湖街荔新路爱民大道路口北往南"], [23.282679, 113.844289, "增江街增江大道光明东路路口东往西"], [23.282853, 113.843859, "增江街增江大道光明东路路口西往东"], [23.282543, 113.844154, "增江街增江大道光明东路路口南往北"], [23.283057, 113.844094, "增江街增江大道光明东路路口北往南"], [23.284606, 113.844412, "增江街增江大道东桥东路路口南往北"], [23.284989, 113.844394, "增江街增江大道东桥东路路口北往南"], [23.120946, 113.641182, "新塘镇广深大道东（107国道）新沙大道北路口北往南"], [23.12026, 113.641242, "新塘镇广深大道东（107国道）新沙大道南路口南往北"], [23.120612, 113.64166, "新塘镇广深大道东（107国道）新沙大道北路口东往西"], [23.120579, 113.640736, "新塘镇广深大道东（107国道）新沙大道北路口西往东"], [23.121164, 113.631096, "新塘镇广深大道东（107国道）光华路路口北往南"], [23.120631, 113.631196, "新塘镇广深大道东（107国道）光华路路口南往北"], [23.120974, 113.631455, "新塘镇广深大道东（107国道）光华路路口东往西"], [23.120876, 113.630848, "新塘镇广深大道东（107国道）光华路路口西往东"], [23.12135, 113.62499, "新塘镇广深大道东（107国道）铁塔大道（东华大道）路口北往南"], [23.120782, 113.625438, "新塘镇广深大道东（107国道）铁塔大道（东华大道）路口南往北"], [23.121139, 113.625785, "新塘镇广深大道东（107国道）铁塔大道（东华大道）路口东往西"], [23.121075, 113.624753, "新塘镇广深大道东（107国道）铁塔大道（东华大道）路口西往东"], [23.121546, 113.62081, "新塘镇广深大道东（107国道）石新路路口北往南"], [23.120875, 113.620986, "新塘镇广深大道东（107国道）府前路路口南往北"], [23.121284, 113.621285, "新塘镇广深大道东（107国道）石新路路口东往西"], [23.121197, 113.620469, "新塘镇广深大道东（107国道）石新路路口西往东"], [23.121435, 113.61323, "新塘镇广深大道中（107国道）荔新大道路口西往东"], [23.121516, 113.614631, "新塘镇广深大道中（107国道）荔新大道路口东往西"], [23.121989, 113.613842, "新塘镇广深大道中（107国道）荔新大道路口北往南"], [23.121051, 113.61407, "新塘镇广深大道中（107国道）解放北路路口南往北"], [23.122035, 113.607823, "新塘镇广深大道中（107国道）新新大道南路口北往南"], [23.121649, 113.607739, "新塘镇广深大道中（107国道）新新大道南路口西往东"], [23.121513, 113.608045, "新塘镇广深大道中（107国道）群贤路路口南往北"], [23.121734, 113.608338, "新塘镇广深大道中（107国道）群贤路路口东往西"], [23.121869, 113.604546, "新塘镇广深大道中（107国道）港口大道北路口东往西"], [23.121796, 113.603833, "新塘镇广深大道中（107国道）港口大道北路口西往东"], [23.121547, 113.604252, "新塘镇广深大道中（107国道）港口大道北路口南往北"], [23.122167, 113.604113, "新塘镇广深大道中（107国道）港口大道北路口北往南"], [23.114035, 113.63631, "新塘镇新塘大道东茅山大道路口东往西"], [23.113808, 113.635511, "新塘镇新塘大道东茅山大道路口西往东"], [23.113616, 113.636085, "新塘镇新塘大道东茅山大道路口南往北"], [23.114223, 113.635725, "新塘镇新塘大道东茅山大道路口北往南"], [23.113751, 113.631628, "新塘镇新塘大道东光华路路口东往西"], [23.113595, 113.631019, "新塘镇新塘大道东光华路路口西往东"], [23.113482, 113.631371, "新塘镇新塘大道东光华路路口南往北"], [23.113949, 113.631286, "新塘镇新塘大道东光华路路口北往南"], [23.11346, 113.626104, "新塘镇新塘大道东东华大道（铁塔大道）路口东往西"], [23.113269, 113.625094, "新塘镇新塘大道东东华大道（铁塔大道）路口西往东"], [23.112891, 113.625809, "新塘镇新塘大道东东华大道（铁塔大道）路口南往北"], [23.113806, 113.625403, "新塘镇新塘大道东东华大道（铁塔大道）路口北往南"], [23.116685, 113.608979, "新塘镇新塘大道中群贤路路口东往西"], [23.116564, 113.608618, "新塘镇新塘大道中群贤路路口西往东"], [23.116464, 113.60887, "新塘镇新塘大道中群贤路路口南往北"], [23.116809, 113.608789, "新塘镇新塘大道中群贤路路口北往南"], [23.116491, 113.604718, "新塘镇新塘大道西港口大道北路口东往西"], [23.11632, 113.604116, "新塘镇新塘大道西港口大道北路口西往东"], [23.116174, 113.604499, "新塘镇新塘大道西港口大道南路口南往北"], [23.116647, 113.604342, "新塘镇新塘大道西港口大道北路口北往南"], [23.124236, 113.622104, "新塘镇石新路东坑三横路路口西往东"], [23.124455, 113.622611, "新塘镇石新路东坑三横路路口北往南"], [23.124106, 113.622505, "新塘镇石新路东坑三横路路口南往北"], [23.124526, 113.614127, "新塘镇荔新大道东坑三横路路口东往西"], [23.124425, 113.61325, "新塘镇荔新大道东坑三横路路口西往东"], [23.12409, 113.613861, "新塘镇荔新大道东坑三横路路口南往北"], [23.124818, 113.613571, "新塘镇荔新大道东坑三横路路口北往南"], [23.158192, 113.660086, "新塘镇沙埔大道石新路路口北往南"], [23.158133, 113.660396, "新塘镇沙埔大道石新路路口东往西"], [23.157679, 113.66018, "新塘镇沙埔大道石新路路口西往东"], [23.169155, 113.655873, "新塘镇荔新大道沙埔大道路段南往北"], [23.16972, 113.656236, "新塘镇荔新大道沙埔大道路段北往南"], [23.285572, 113.619844, "广汕公路中新中福路口东往西"], [23.28552, 113.619209, "广汕公路中新中福路口西往东"], [23.285754, 113.619592, "广汕公路中新中福路口北往南"], [23.284589, 113.622294, "广汕公路中新新墩路口东往西"], [23.284769, 113.6216, "广汕公路中新新墩路口西往东"], [23.284377, 113.621924, "广汕公路中新新墩路口南往北"], [23.285088, 113.621643, "广汕公路中新新墩路口北往南"], [23.277883, 113.654383, "广汕公路福宁大道路口东往西"], [23.277543, 113.653678, "广汕公路福宁大道路口西往东"], [23.275964, 113.676875, "广汕公路朱村街育水一路路口东往西"], [23.275782, 113.675462, "广汕公路朱村街育水一路路口西往东"], [23.275514, 113.676255, "广汕公路朱村街育水一路路口南往北"], [23.276306, 113.676026, "广汕公路朱村街育水一路路口北往南"], [23.272322, 113.698528, "广汕公路朱村街朱宁路口东往西"], [23.272064, 113.696328, "广汕公路朱村街朱宁路口西往东"], [23.27172, 113.697214, "广汕公路朱村街朱宁路口南往北"], [23.272832, 113.70727, "广汕公路朱村街东风本田店路口东往西"], [23.27256, 113.706883, "广汕公路朱村街东风本田店路口西往东"], [23.272431, 113.70719, "广汕公路朱村街东风本田店路口南往北"], [23.27417, 113.723178, "广汕公路朱村街松田学院后门路口东往西"], [23.273925, 113.722577, "广汕公路朱村街松田学院后门路口西往东"], [23.273768, 113.722901, "广汕公路朱村街松田学院后门路口南往北"], [23.277312, 113.747788, "广汕公路朱村街荔广二路路口东往西"], [23.276978, 113.747161, "广汕公路朱村街荔广二路路口西往东"], [23.276815, 113.747612, "广汕公路朱村街荔广二路路口南往北"], [23.279139, 113.754731, "广汕公路朱村街朱村东收费站路口东往西"], [23.278586, 113.753402, "广汕公路朱村街朱村东收费站路口西往东"], [23.286513, 113.675016, "朱村街科德大道育水一路路口东往西"], [23.285419, 113.67399, "朱村街科德大道育水一路路口西往东"], [23.285524, 113.674754, "朱村街科德大道育水一路路口南往北"], [23.286585, 113.674366, "朱村街科德大道育水一路路口北往南"], [23.284625, 113.672499, "朱村街科德大道明科四路路口东往西"], [23.284252, 113.672018, "朱村街科德大道明科四路路口西往东"], [23.284084, 113.672327, "朱村街科德大道明科四路路口南往北"], [23.25014, 113.610402, "中新镇新新大道宁西路口南往北"], [23.250775, 113.610499, "中新镇新新大道宁西路口北往南"], [23.261198, 113.613303, "中新镇新新大道下龙路路口北往南"], [23.260839, 113.613374, "中新镇新新大道下龙路路口南往北"], [23.261039, 113.613571, "中新镇新新大道下龙路路口东往西"], [23.272132, 113.618991, "中新镇新新大道新墩路路口南往北"], [23.272506, 113.619029, "中新镇新新大道新墩路路口北往南"], [23.291171, 113.615625, "中新镇S118省道下车路路口东往西"], [23.291104, 113.614723, "中新镇S118省道下车路路口西往东"], [23.291413, 113.615051, "中新镇S118省道下车路路口北往南"], [23.291034, 113.622213, "中新镇S118省道中福路路口东往西"], [23.2909, 113.621539, "中新镇S118省道中福路路口西往东"], [23.291308, 113.621918, "中新镇S118省道中福路路口北往南"], [23.290816, 113.621779, "中新镇S118省道中福路路口南往北"], [23.300137, 113.629559, "中新镇S118省道乌石路口南往北"], [23.300394, 113.629645, "中新镇S118省道乌石路口北往南"], [23.341555, 113.629688, "中新镇S118省道广河高速路口北往南"], [23.34108, 113.629287, "中新镇S118省道广河高速路口南往北"], [23.360337, 113.634003, "中新镇S118省道福和市场路口东往西"], [23.360253, 113.633651, "中新镇S118省道福和市场路口西往东"], [23.360152, 113.633898, "中新镇S118省道福和市场路口南往北"], [23.360424, 113.633767, "中新镇S118省道福和市场路口北往南"], [23.187684, 113.855189, "S256荔三公路三江市场路口北往南"], [23.187283, 113.855127, "S256荔三公路三江市场路口南往北"], [23.187626, 113.854992, "S256荔三公路三江市场路口西往东"], [23.186195, 113.854631, "S256荔三公路中山路路口北往南"], [23.185885, 113.854622, "S256荔三公路中山路路口南往北"], [23.186021, 113.854821, "S256荔三公路中山路路口东往西"], [23.186063, 113.854399, "S256荔三公路中山路路口西往东"], [23.174811, 113.847312, "S256荔三公路东西大道路口北往南"], [23.173928, 113.846656, "S256荔三公路东西大道路口南往北"], [23.174775, 113.846749, "S256荔三公路东西大道路口东往西"], [23.174648, 113.846547, "S256荔三公路东西大道路口西往东"], [23.164464, 113.838426, "S256荔三公路幸福田园路口北往南"], [23.163815, 113.838359, "S256荔三公路幸福田园路口南往北"], [23.163867, 113.838529, "S256荔三公路幸福田园路口东往西"], [23.16438, 113.838238, "S256荔三公路幸福田园路口西往东"], [23.134377, 113.827631, "S256荔三公路光明路路口北往南"], [23.134012, 113.827586, "S256荔三公路光明路路口南往北"], [23.134222, 113.827846, "S256荔三公路光明路路口东往西"], [23.134174, 113.827359, "S256荔三公路光明路路口西往东"], [23.205535, 113.859871, "S256荔三公路建设路路口北往南"], [23.204745, 113.859792, "S256荔三公路建设路路口南往北"], [23.205121, 113.8602, "S256荔三公路建设路路口东往西"], [23.205151, 113.859391, "S256荔三公路建设路路口西往东"], [23.200427, 113.764755, "S379石新公路麻车村牌坊（西）路口北往南"], [23.199932, 113.764887, "S379石新公路麻车村牌坊（西）路口南往北"], [23.200091, 113.765084, "S379石新公路麻车村牌坊（西）路口东往西"], [23.200279, 113.764451, "S379石新公路麻车村牌坊（西）路口西往东"], [23.196674, 113.76968, "S379石新公路农商银行路口北往南"], [23.196516, 113.769861, "S379石新公路农商银行路口南往北"], [23.196643, 113.769916, "S379石新公路农商银行路口东往西"], [23.19657, 113.769631, "S379石新公路农商银行路口西往东"], [23.189798, 113.774035, "S379石新公路麻车村路口北往南"], [23.189624, 113.774242, "S379石新公路麻车村路口南往北"], [23.189761, 113.774329, "S379石新公路麻车村路口东往西"], [23.189908, 113.774137, "S379石新公路麻车村路口西往东"], [23.205824, 113.752415, "S379石新公路南坣村路口北往南"], [23.205831, 113.752759, "S379石新公路南坣村路口南往北"], [23.205971, 113.752674, "S379石新公路南坣村路口西往东"], [23.205728, 113.748868, "S379石新公路朱石公路路口北往南"], [23.205745, 113.748984, "S379石新公路朱石公路路口南往北"], [23.205564, 113.749266, "S379石新公路朱石公路路口东往西"], [23.205428, 113.748657, "S379石新公路朱石公路路口西往东"], [23.212386, 113.743812, "S119荔新公路朱石公路路口北往南"], [23.211298, 113.743779, "S119荔新公路朱石公路路口南往北"], [23.211596, 113.744308, "S119荔新公路朱石公路路口东往西"], [23.211492, 113.744202, "S119荔新公路朱石公路路口西往东"], [23.220415, 113.826113, "X291新城大道豪园正门路口北往南"], [23.219701, 113.826061, "X291新城大道豪园正门路口南往北"], [23.220755, 113.826786, "X291新城大道豪园正门路口东往西"], [23.208781, 113.821557, "X291新城大道广惠高速路口北往南"], [23.207667, 113.821175, "X291新城大道广惠高速路口南往北"], [23.208329, 113.820832, "X291新城大道广惠高速路口东往西"], [23.205255, 113.819629, "X291新城大道塘头村路口北往南"], [23.204361, 113.819431, "X291新城大道塘头村路口南往北"], [23.205191, 113.819274, "X291新城大道塘头村路口东往西"], [23.204382, 113.818839, "X291新城大道塘头村路口西往东"], [23.200686, 113.804391, "X291新城大道增城站路口北往南"], [23.200553, 113.803534, "X291新城大道增城站路口南往北"], [23.201057, 113.804047, "X291新城大道增城站路口东往西"], [23.187493, 113.794066, "X291新城大道东西大道路口北往南"], [23.186497, 113.793985, "X291新城大道东西大道路口南往北"], [23.186995, 113.794511, "X291新城大道东西大道路口东往西"], [23.18699, 113.793572, "X291新城大道东西大道路口西往东"], [23.195204, 113.795643, "X291新城大道绿湖国际路口北往南"], [23.194718, 113.7954, "X291新城大道绿湖国际路口南往北"], [23.194812, 113.795678, "X291新城大道绿湖国际路口东往西"], [23.195075, 113.795244, "X291新城大道绿湖国际路口西往东"], [23.20014, 113.800378, "X291新城大道横岭村路口北往南"], [23.199892, 113.800211, "X291新城大道横岭村路口南往北"], [23.199885, 113.800409, "X291新城大道横岭村路口东往西"], [23.200168, 113.800138, "X291新城大道横岭村路口西往东"], [23.23702, 113.828384, "X291新城大道南北大道路口北往南"], [23.236225, 113.828555, "X291新城大道南北大道路口南往北"], [23.236501, 113.828892, "X291新城大道南北大道路口东往西"], [23.236419, 113.827957, "X291新城大道南北大道路口西往东"], [23.187981, 113.785235, "东西大道石滩中学路口南往北"], [23.18775, 113.785515, "东西大道石滩中学路口东往西"], [23.187488, 113.784715, "东西大道石滩中学路口西往东"], [23.184704, 113.802492, "东西大道南北大道路口北往南"], [23.183866, 113.802349, "东西大道南北大道路口南往北"], [23.184234, 113.802932, "东西大道南北大道路口东往西"], [23.184296, 113.801933, "东西大道南北大道路口西往东"], [23.17826, 113.841035, "东西大道溪头村路口北往南"], [23.177667, 113.840007, "东西大道溪头村路口南往北"], [23.177894, 113.841498, "东西大道溪头村路口东往西"], [23.177977, 113.839975, "东西大道溪头村路口西往东"], [23.417438, 113.895479, "正果镇正果大道正果洋路口东往西"], [23.417315, 113.895259, "正果镇正果大道正果洋路口西往东"], [23.417307, 113.895347, "正果镇正果大道正果洋路口南往北"], [23.417478, 113.895382, "正果镇正果大道正果洋路口北往南"], [23.383698, 113.834622, "小楼镇增派路何仙姑广场路口南往北"], [23.383937, 113.834178, "小楼镇增派路何仙姑广场路口北往南"], [23.377968, 113.83282, "小楼镇增派路小楼政府路口南往北"], [23.378297, 113.832866, "小楼镇增派路小楼政府路口北往南"], [23.378236, 113.832687, "小楼镇增派路小楼政府路口西往东"], [23.486982, 113.778573, "派潭镇派潭大道派从路口东往西"], [23.486912, 113.778044, "派潭镇派潭大道派从路口西往东"], [23.486794, 113.778335, "派潭镇派潭大道派从路口南往北"], [23.487115, 113.778233, "派潭镇派潭大道派从路口北往南"], [23.568195, 113.76975, "派潭镇白水寨大道与达开北路路口东往西"], [23.567996, 113.769064, "派潭镇白水寨大道与达开北路路口西往东"], [23.567783, 113.769587, "派潭镇白水寨大道与达开北路路口南往北"], [23.487178, 113.759403, "派潭镇派从路佳松岭路口东往西"], [23.487196, 113.758959, "派潭镇派从路佳松岭路口西往东"], [23.149998, 113.601672, "永宁街新新公路创新大道路口北往南"], [23.149356, 113.602279, "永宁街新新公路创新大道路口南往北"], [23.149709, 113.602357, "永宁街新新公路创新大道路口西往东"], [23.155419, 113.598271, "永宁街新新公路创誉路路口北往南"], [23.155, 113.598786, "永宁街新新公路创誉路路口南往北"], [23.155559, 113.598692, "永宁街新新公路创誉路路口东往西"], [23.154871, 113.598185, "永宁街新新公路创誉路路口西往东"], [23.163676, 113.596698, "永宁街新新公路广惠高速路口北往南"], [23.162771, 113.596941, "永宁街新新公路广惠高速路口南往北"], [23.172547, 113.593283, "永宁街新新公路永顺大道路口北往南"], [23.172279, 113.593721, "永宁街新新公路永顺大道路口南往北"], [23.172752, 113.59363, "永宁街新新公路永顺大道路口东往西"], [23.17905, 113.590444, "永宁街新新公路民兵路路口北往南"], [23.178813, 113.590799, "永宁街新新公路民兵路路口东往西"], [23.182745, 113.589938, "永宁街新新公路新城市中心规划路路口南往北"], [23.182879, 113.589431, "永宁街新新公路新城市中心规划路路口西往东"], [23.183254, 113.589596, "永宁街新新公路新城市中心规划路路口北往南"], [23.193866, 113.59386, "永宁街新新公路创优路路口东往西"], [23.19412, 113.593193, "永宁街新新公路创优路路口西往东"], [23.193726, 113.593494, "永宁街新新公路创优路路口南往北"], [23.194249, 113.593522, "永宁街新新公路创优路路口北往南"], [23.200209, 113.599181, "永宁街新新公路永宁大道路口东往西"], [23.20041, 113.598342, "永宁街新新公路永宁大道路口西往东"], [23.199999, 113.598615, "永宁街新新公路永宁大道路口南往北"], [23.200628, 113.598892, "永宁街新新公路永宁大道路口北往南"], [23.222725, 113.599987, "永宁街新新公路金地上城小区路口南往北"], [23.223154, 113.599793, "永宁街新新公路金地上城小区路口北往南"], [23.231477, 113.60048, "永宁街新新公路叶岭村路口南往北"], [23.232185, 113.601101, "永宁街新新公路叶岭村路口北往南"], [23.239139, 113.609139, "永宁街新新公路万科城路口南往北"], [23.239942, 113.609114, "永宁街新新公路万科城路口北往南"], [23.137496, 113.597787, "永宁街汽车城大道纵一路路口东往西"], [23.137329, 113.597261, "永宁街汽车城大道纵一路路口西往东"], [23.137173, 113.597455, "永宁街汽车城大道纵一路路口南往北"], [23.137171, 113.591821, "永宁街汽车城大道广园桥底路口西往东"], [23.137305, 113.592041, "永宁街汽车城大道广园桥底路口东往西"], [23.124773, 113.572517, "永宁街凤凰城大道广园路桥底路口（一环岛）路口南往北"], [23.125072, 113.572377, "永宁街凤凰城大道广园路桥底路口（一环岛）路口北往南"], [23.157543, 113.583971, "永宁街岗丰大道凤凰城大道路口北往南"], [23.157327, 113.584229, "永宁街岗丰大道凤凰城大道路口东往西"], [23.157322, 113.583778, "永宁街岗丰大道凤凰城大道路口西往东"], [23.15716, 113.584108, "永宁街岗丰大道凤凰城大道路口南往北"], [23.193947, 113.617321, "宁西街永宁大道新科路路口东往西"], [23.193699, 113.616858, "宁西街永宁大道新科路路口南往北"], [23.194125, 113.616627, "宁西街永宁大道新科路路口西往东"], [23.181449, 113.623232, "宁西街永宁大道香山大道路口南往北"], [23.182105, 113.623559, "宁西街永宁大道香山大道路口东往西"], [23.181706, 113.622508, "宁西街永宁大道香山大道路口西往东"], [23.183456, 113.633038, "宁西街永宁大道新和北路路口西往东"], [23.183324, 113.63322, "宁西街永宁大道新和北路路口南往北"], [23.183398, 113.633356, "宁西街永宁大道新和北路路口东往西"], [23.198139, 113.65773, "宁西街永宁大道维信诺路口西往东"], [23.198478, 113.658066, "宁西街永宁大道维信诺路口东往西"], [23.218852, 113.659429, "宁西街太新路朱宁路路口北往南"], [23.218393, 113.65976, "宁西街太新路朱宁路路口南往北"], [23.218892, 113.65991, "宁西街太新路朱宁路路口东往西"], [23.210861, 113.660938, "宁西街沙宁路永宁大道路口北往南"], [23.210424, 113.661091, "宁西街沙宁路永宁大道路口南往北"], [23.210578, 113.660811, "宁西街沙宁路永宁大道路口西往东"], [23.180883, 113.618832, "宁西街创业大道新耀北路路口西往东"], [23.180666, 113.619243, "宁西街创业大道新耀北路路口南往北"], [23.181429, 113.6194, "宁西街创业大道新耀北路路口北往南"], [23.181263, 113.619819, "宁西街创业大道新耀北路路口东往西"], [23.154502, 113.61687, "宁西街创新大道金融大道路口南往北"], [23.154945, 113.61694, "宁西街创新大道金融大道路口东往西"], [23.154593, 113.616231, "宁西街创新大道金融大道路口西往东"], [23.155914, 113.622542, "宁西街创新大道新耀南路路口南往北"], [23.156558, 113.622209, "宁西街创新大道新耀南路路口北往南"], [23.156443, 113.622702, "宁西街创新大道新耀南路路口东往西"], [23.156083, 113.622064, "宁西街创新大道新耀南路路口西往东"], [23.157534, 113.627456, "宁西街创新大道香山大道路口南往北"], [23.157686, 113.626761, "宁西街创新大道香山大道路口西往东"], [23.158166, 113.627517, "宁西街创新大道香山大道路口东往西"], [23.158242, 113.626891, "宁西街创新大道香山大道路口北往南"], [23.185894, 113.612684, "宁西街新科路创盈路口南往北"], [23.18622, 113.612759, "宁西街新科路创盈路口北往南"], [23.186099, 113.612924, "宁西街新科路创盈路口东往西"], [23.186014, 113.612492, "宁西街新科路创盈路口西往东"], [23.186014, 113.612492, "宁西街创强路新和北路路口南往北"], [23.186014, 113.612492, "宁西街创强路新和北路路口西往东"], [23.186014, 113.612492, "宁西街创强路新和北路路口东往西"], [23.186014, 113.612492, "宁西街创强路新和北路路口北往南"], [23.180617, 113.632203, "宁西街创业大道新和北路南往北"], [23.181301, 113.632333, "宁西街创业大道新和北路北往南"], [23.180971, 113.632646, "宁西街创业大道新和北路东往西"], [23.18095, 113.63192, "宁西街创业大道新和北路西往东"], [23.184266, 113.662441, "宁西街创强路沙宁路口西往东"], [23.184153, 113.662805, "宁西街创强路沙宁路口南往北"], [23.184884, 113.662795, "宁西街创强路沙宁路口北往南"], [23.169586, 113.702106, "仙村镇石新路苍吓新村路口东往西"], [23.169437, 113.701874, "仙村镇石新路苍吓新村路口西往东"], [23.096269, 113.323137, "新港中路艺苑路(东往西)"], [23.295461, 113.33481, "北太路科园路口西往东"], [23.076941, 113.290083, "东晓南新滘西路口(北往南)"], [23.207594, 113.320907, "同泰路(西往东)"], [23.126389, 113.343401, "黄埔大道石牌东路路口(东往西)"], [23.164238, 113.331972, "燕岭路武警医院对出西往东西掉头匝道"], [22.987438, 113.337858, "新光快速路兴业大道路口以北约50米(南往北)"], [22.93568, 113.379317, "清河东路(西往东)"], [23.161245, 113.271354, "白云大道南跨线桥(北往南)"], [23.254975, 113.290942, "鹤龙二路(南往北)"], [23.230941, 113.215726, "白云湖大道(北往南)"], [23.251981, 113.253232, "广花路石马隧道入口南往北"], [23.113627, 113.326984, "新中轴隧道(东往西)"], [23.117668, 113.343128, "花城大道马场路(东往西)"], [23.117739, 113.343465, "花城大道马场路(南往北)"], [23.129871, 113.321578, "体育西路(南往北)"], [23.095645, 113.272761, "江南西路紫丹大街路口西往东"], [23.095756, 113.272814, "江南西路紫丹大街路口东往西"], [23.08264, 113.233955, "浣花路花地大道中路口(西往东)"], [23.082873, 113.234196, "浣花路花地大道中路口(北往南)"], [23.082873, 113.234196, "浣花路花地大道中路口(南往北)"], [23.329224, 113.301007, "鹤龙六路人和镇政府路口南往北"], [23.116287, 113.614219, "新塘大道解放北路路口(西往东)"], [23.086162, 113.28595, "南泰路泰沙路(西往东)"], [23.1597, 113.214133, "环洲三路彩滨中路口北往南"], [23.203942, 113.279591, "广云路云城西路口南往北"], [23.179906, 113.320435, "广州大道北梅园路口北往南"], [23.199632, 113.32607, "广州大道北同泰路口南往北"], [23.416407, 113.470081, "广从十路九佛西路口北往南"], [23.366413, 113.355327, "竹料大道西竹料商业广场东往西"], [23.342579, 113.284636, "鹤龙七路华盛北路口西往东"], [23.329321, 113.300714, "鹤龙六路人和镇政府路口北往南"], [23.225493, 113.300164, "集贤路岭云路口北往南"], [23.225373, 113.300003, "集贤路岭云路口西往东"], [23.253329, 113.300133, "均禾大道上村中街路口东往西"], [23.106945, 113.265019, "同福东路同庆路口西往东"], [23.10504, 113.352058, "阅江中路南风东路口东往西"], [23.104947, 113.35172, "阅江中路南风东路口西往东"], [23.095938, 113.37346, "科韵南路黄埔涌大桥上桥位北往南"], [23.086051, 113.367551, "新滘东路赤沙路口东往西"], [23.077923, 113.314879, "新滘西路广州大道南隧道东往西"], [23.056568, 113.354609, "小洲东路瀛洲路口西往东"], [23.056418, 113.35481, "小洲东路瀛洲路口南往北"], [23.095252, 113.315448, "广州大道南客村立交三层南往北入口"], [23.096261, 113.315125, "广州大道南客村立交三层北往南入口"], [23.104454, 113.3774, "阅江路昭悦路口东往西"], [23.077799, 113.313859, "新滘西路广州大道南隧道西往东"], [23.075983, 113.289685, "新滘西路东晓南路口隧道西往东"], [23.075799, 113.290649, "东晓南路新滘西路口南往北"], [23.104266, 113.313808, "滨江东路红梅路口东往西"], [23.106911, 113.334424, "阅江西路磨碟沙路口东往西"], [23.096316, 113.327617, "新港中路赤岗北路口段东往西"], [23.095626, 113.310783, "新港西路敦和路口东往西"], [23.254774, 113.295798, "均禾大道长碰坑背工业街路口东往西"], [23.252312, 113.302464, "均禾大道武警指挥学院路口西往东"], [23.119829, 113.410655, "中山大道中黄村BRT东往西"], [23.119502, 113.410595, "中山大道中黄村BRT西往东"], [23.129663, 113.328301, "体育东路六运五街路口南往北"], [23.136261, 113.347495, "中山大道西师大暨大BRT东往西"], [23.134467, 113.358375, "中山大道西华景新城BRT东往西"], [23.134368, 113.35836, "中山大道西华景新城BRT西往东"], [23.125871, 113.37949, "中山大道西棠下村BRT东往西"], [23.125802, 113.379478, "中山大道西棠下村BRT西往东"], [23.125401, 113.383938, "中山大道西棠东BRT东往西"], [23.131079, 113.324378, "天河南一路天河南地铁A出口西往东"], [23.167483, 113.337436, "燕岭路银河园对出西往西掉头匝道西入口西往东"], [23.133724, 113.362448, "中山大道西天府路口东往西"], [23.124582, 113.392766, "中山大道中车陂路口东往西"], [23.124174, 113.392343, "车陂路中山大道路口南往北"], [23.133437, 113.324278, "天河路天河城大街路口西往东"], [23.131064, 113.321561, "体育西路天河南一路口南往北"], [23.131025, 113.325907, "天河南一路正佳路口东往西"], [23.113708, 113.325548, "临江大道新中轴隧道(负一层)入口东往西"], [23.119026, 113.321266, "华夏路花城大道路口南往北"], [23.119704, 113.321093, "华夏路花城大道路口北往南"], [23.115862, 113.321246, "华夏路华就路口南往北"], [23.116171, 113.321058, "华夏路华就路口北往南"], [23.123138, 113.361876, "黄埔大道中员村二横路口西往东"], [23.166647, 113.415698, "科学大道大观中路口东往西"], [23.149167, 113.33377, "广园快速路天寿路口北往南"], [23.143364, 113.436872, "科林路科珠路口西往东"], [23.118917, 113.328345, "花城大道冼村路口东往西"], [23.118781, 113.327543, "花城大道冼村路口西往东"], [23.118368, 113.328027, "花城大道冼村路口南往北"], [23.119192, 113.327858, "花城大道冼村路口北往南"], [23.126539, 113.343465, "黄埔大道西石牌东路口北往南"], [23.149593, 113.331049, "广园快速路天寿立交上桥位西往东"], [23.13331, 113.327987, "天河路体育东路口西往东"], [23.135114, 113.291559, "环市东路远洋宾馆对出路段西往东"], [23.132663, 113.254017, "东风西路人民北路口西往东"], [23.132675, 113.255078, "东风西路人民北路口东往西"], [23.131044, 113.282845, "东风东路陵园西路口西往东"], [23.131076, 113.271812, "东风中路小北路口东往西"], [23.132812, 113.252912, "东风西路广州市税务局对出路段西往东"], [23.340363, 113.289305, "106国道凤岗路口南往北"], [23.340676, 113.28945, "106国道凤岗路口北往南"], [23.203718, 113.259983, "黄石西路黄石立交西往东"], [23.169247, 113.347042, "长兴路(西往东)"], [23.169242, 113.347388, "长兴路(东往西)"], [23.352904, 113.271587, "鹤龙八路和瑞路(北往南)"], [23.352558, 113.271918, "鹤龙八路和瑞路(南往北)"], [23.128611, 113.263238, "府前路连新路(北往南)"], [23.128759, 113.263137, "府前路连新路(东往西)"], [23.128732, 113.263424, "府前路连新路(西往东)"], [23.127429, 113.265389, "吉祥路广卫路(北往南)"], [23.127279, 113.265439, "吉祥路广卫路(南往北)"], [23.120043, 113.302211, "寺右新马路达道路(北往南)"], [23.086238, 113.28593, "南泰路泰沙路(东往西)"], [23.269423, 113.291888, "空港大道(北往南)"], [23.052428, 113.255739, "东沙大道(南往北)"], [23.090902, 113.276706, "江南大道中昌岗地铁站(北往南)"], [23.119956, 113.305294, "寺右新马路长城大厦前面过街天桥(东往西)"], [23.210324, 113.318079, "同泰路南湖西路(南往北)"], [23.154314, 113.300996, "广园东路永福路(西往东)"], [23.227725, 113.289723, "空港大道启德路(南往北)"], [23.228228, 113.289716, "空港大道启德路(北往南)"], [23.256134, 113.290529, "鹤龙二路新石路(西往东)"], [23.231214, 113.290685, "空港大道康卫路(北往南)"], [23.24371, 113.348304, "黄庄北路大源南路口南往北"], [23.262544, 113.35791, "大源北路(南往北)"], [23.148511, 113.249224, "广园西路广圣宾馆右侧车道(南往北)"], [23.148324, 113.249087, "广园西路广圣宾馆中间车道(南往北)"], [23.1549, 113.251751, "广园西路盈富商贸城门口(南往北)"], [23.134557, 113.294459, "环市东路往农林下路(逆行)(西往东)"], [23.127431, 113.265323, "吉祥路广卫路人行道(北往南)"], [23.119951, 113.262693, "解放路惠福路(南往北)"], [23.120451, 113.262506, "解放路惠福路(北往南)"], [23.120102, 113.262325, "解放路惠福路(西往东)"], [23.120217, 113.262874, "解放路惠福路(东往西)"], [23.093208, 113.284399, "东晓南路新港西路(南往北)"], [23.064817, 113.298492, "南洲路东晓南路(东往西)"], [23.091188, 113.333033, "江海大道(南往北)"], [23.143108, 113.228081, "东风西路增埗桥上桥位(北往南)"], [23.14002, 113.231739, "东风西路增埗桥上桥位(南往北)"], [23.065348, 113.297612, "南洲路东晓南路(北往南)"], [23.070252, 113.295256, "东晓南路(南往北)"], [23.186905, 113.363378, "天源路(东往西)"], [23.185161, 113.257908, "三元里大道棠安路口北往南"], [23.17025, 113.327261, "沙太南路兴华街卫生中心对出(北往南)"], [23.068413, 113.284924, "工业大道南永翠路口(东往西)"], [23.145679, 113.326127, "紫荆路天誉花园对出(东往西)"], [23.104875, 113.270281, "江南大道中前进路口北往南"], [23.087413, 113.261505, "工业大道北五一新村对出路段南往北"], [23.211158, 113.265291, "鹤龙一路隧道口(北往南)"], [23.128519, 113.343271, "石牌东路品高汇电子广场对出(北往南)"], [23.234008, 113.279533, "鹤龙二路嘉禾中学附近(北往南)"], [23.233557, 113.279225, "鹤龙二路嘉禾中学附近(南往北)"], [23.226763, 113.261741, "广花一路四矿广仕创意园对出(南往北)"], [23.092195, 113.234052, "花蕾路花地大道中路口东往西"], [23.397727, 113.222055, "天贵路龙珠路口(北往南)"], [23.383641, 113.222871, "天贵路体育路口(南往北)"], [23.400314, 113.211936, "迎宾大道茶园路口(西往东)"], [23.401266, 113.218649, "迎宾大道公益路口(东往西)"], [23.419626, 113.234051, "平石路凤凰北路口(西往东)"], [23.463988, 113.225894, "芙蓉大道金狮大道路口(南往北)"], [23.455185, 113.172307, "狮岭大道宝峰路口(西往东)"], [23.466179, 113.166177, "金狮大道阳光路口(西往东)"], [23.376239, 113.10387, "G107线合进大道路口(东往西)"], [23.385382, 113.08547, "G107线培正大道路段(西往东)"], [23.457458, 113.280395, "G106线育才路口(南往北)"], [23.409185, 113.250834, "三东大道河畔东路口(东往西)"], [23.425624, 113.419595, "S118线北钟路口(西往东)"], [23.436359, 113.320853, "花都大道花东市场路段(西往东)"], [23.392295, 113.171825, "红棉大道官溪路口(北往南)"], [23.379727, 113.17694, "风神大道汽车城地铁站D出口路段(东往西)"], [23.361744, 113.223718, "广花五路空铁大道路口(南往北)"], [23.367539, 113.250367, "镜湖大道孙逸仙纪念医院路段(南往北)"], [23.371457, 113.239416, "凤凰南路国光厂6号门路口(南往北)"], [23.401246, 113.228196, "迎宾大道曙光路口(东往西)"], [23.408695, 113.218713, "公益路梅花路口(北往南)"], [23.386245, 113.206763, "宝华路五华直街(西往东)"], [23.139059, 113.233552, "东风西路西场立交(东往西)"], [23.138949, 113.233474, "东风西路西场立交(西往东)"], [23.136328, 113.233043, "南岸路粤电花园往西场立交方向(南往北)"], [23.156033, 113.263414, "机场路机场立交上桥位(北往南)"], [23.191355, 113.38227, "广汕一路龙洞地铁站对出(东往西)"], [23.350995, 113.369462, "广从公路纲领路(北往南)"], [23.349767, 113.369016, "广从路竹料地铁站对出路段南往北"], [23.111853, 113.267425, "海珠桥(南往北)"], [23.068303, 113.284857, "工业大道南永翠路口(西往东)"], [23.289386, 113.359229, "太和南路广州168公馆对出路口南往北"], [23.358885, 113.375504, "广从七路竹料大道东(南往北)"], [23.359481, 113.375779, "广从七路竹料大道东(北往南)"], [23.146285, 113.305161, "先烈中路沙河顶地铁站(东往西)"], [22.774245, 113.601992, "港前大道与英东大道路口(北往南)"], [22.773999, 113.602413, "港前大道与英东大道路口(南往北)"], [22.753704, 113.562556, "环市大道与工业一路人行过街(东往西)"], [22.753954, 113.562317, "环市大道与工业一路人行过街(西往东)"], [23.12209, 113.343532, "金穗路马场路(东往西)"], [23.368038, 113.214587, "雅源北路(北往南)"], [23.27208, 113.31728, "龙兴西路钟永中路(西往东)"], [23.272112, 113.317325, "龙兴西路钟永中路(东往西)"], [23.136231, 113.3426, "天河路五山路口南往北"], [23.172408, 113.502542, "荔红二路开创大道路口(北往南)"], [23.171831, 113.502549, "荔红二路开创大道路口(南往北)"], [23.172107, 113.502224, "荔红二路开创大道路口(西往东)"], [23.162352, 113.466337, "科丰开泰大道隧道内往北行方向"], [23.163565, 113.466553, "科丰开泰大道隧道内往南行方向"], [23.105873, 113.446308, "港湾路广医五院东门路段(北往南)"], [23.105682, 113.44624, "港湾路广医五院东门路段(南往北)"], [23.11263, 113.458838, "镇东路黄埔体育中心路段(北往南)"], [23.097857, 113.466586, "黄埔东路美联石油立昌加油站路段(西往东)"], [23.130528, 113.533564, "开创大道骏功路路口(西往东)"], [23.130714, 113.534124, "开创大道骏功路路口(东往西)"], [23.149964, 113.262643, "解放北路桂花路天桥底(南往北)"], [23.088999, 113.332919, "江海大道龙涛小学对出(南往北)"], [23.112364, 113.28813, "沿江东路(南往北)"], [23.112398, 113.287776, "沿江东路(北往南)"], [23.112026, 113.262508, "长堤大马路广医一院路段东往西"], [23.291374, 113.845644, "增江街增江大道东山路路口东往西"], [23.291264, 113.845032, "增江街增江大道东山路路口西往东"], [23.28489, 113.844278, "增江街增江大道东桥东路路口西往东"], [23.284748, 113.844534, "增江街增江大道东桥东路路口东往西"], [23.110031, 113.567413, "新塘镇新塘大道南碱大道路口西往东"], [23.110495, 113.567938, "新塘镇新塘大道南碱大道路口东往西"], [23.109923, 113.567635, "新塘镇新塘大道南碱大道路口南往北"], [23.11067, 113.567568, "新塘镇新塘大道南碱大道路口北往南"], [23.118436, 113.56107, "新塘镇广深大道陈家林路路口西往东"], [23.118675, 113.5611, "新塘镇广深大道陈家林路路口北往南"], [23.175955, 113.788135, "石滩镇沙园路立新西路东往西"], [23.176013, 113.78788, "石滩镇沙园路立新西路西往东"], [23.175878, 113.788032, "石滩镇沙园路立新西路南往北"], [23.176122, 113.788017, "石滩镇沙园路立新西路北往南"], [23.168862, 113.634034, "宁西街创誉路新和南路路口西往东"], [23.169184, 113.63442, "宁西街创誉路新和南路路口东往西"], [23.168853, 113.634428, "宁西街创誉路新和南路路口南往北"], [23.16916, 113.634075, "宁西街创誉路新和南路路口北往南"], [23.161113, 113.633732, "宁西街创新大道新祥路路口西往东"], [23.161546, 113.634118, "宁西街创新大道新祥路路口东往西"], [23.289138, 113.791949, "荔城大道增城中学东往西"], [23.273563, 113.820217, "荔城街新城大道丽江国际路段"], [23.203697, 113.324416, "同泰路云祥路口东往西"], [23.21053, 113.318097, "同泰路南湖西路口东往西"], [23.267047, 113.291728, "空港大道龙岗路口北往南"], [23.394774, 113.450872, "广从路马沥地铁站对出路段北往南"], [23.394713, 113.451026, "广从路马沥地铁站对出路段南往北"], [23.324239, 113.360094, "广从三路龙塘跨线桥上桥位北往南"], [23.305265, 113.352702, "广从三路永和大道跨线桥上桥位南往北"], [23.292996, 113.341801, "广从公路永兴跨线桥上桥位南往北"], [23.219203, 113.296757, "白云大道北东平跨线桥上桥位南往北"], [23.293393, 113.293759, "空港大道清南路口北往南"], [23.348634, 113.273555, "鹤龙八路太岗路口北往南"], [23.227573, 113.301058, "集贤路集安街路口西往东"], [23.24781, 113.303888, "均禾大道新科上村田顶大街路口西往东"], [23.179123, 113.251465, "三元里大道德康路口南往北"], [23.179515, 113.251296, "三元里大道德康路口北往南"], [23.15469, 113.214211, "环洲二路彩滨中路口南往北"], [23.119479, 113.286039, "东华南路"], [23.129709, 113.337925, "石牌西路海欣街路口北往南"], [23.176733, 113.245971, "同德围南北高架(南往北)"], [23.172746, 113.244307, "同德围南北高架横滘货场北往南"], [23.179165, 113.246154, "南北高架德康路入口北往南"], [23.164416, 113.382285, "科韵路天桥底(南往北)"], [23.164404, 113.382136, "科韵路天桥底(北往南)"], [23.123723, 113.262417, "解放中路(南往北)"], [23.088141, 113.273719, "昌岗中路礼岗路口东往西"], [23.125238, 113.256033, "中山六路西门口地铁站(东往西)"], [23.405658, 113.218397, "紫薇路公益路口(西往东)"], [23.142292, 113.2422, "环市西路西湾路口西往东2"], [23.142415, 113.242182, "环市西路西湾路口东往西2"], [23.245904, 113.356584, "大源东路(东往西)"], [23.163857, 113.260104, "云城西路上跨机场路跨线桥南往北方向"], [23.238347, 113.290508, "空港大道望岗大马路口西往东"], [23.238088, 113.288896, "望岗大马路口嘉禾望岗地铁站C出口西往东1"], [23.238249, 113.289887, "望岗大马路口嘉禾望岗地铁站C出口西往东2"], [23.23809, 113.288207, "望岗大马路口嘉禾望岗地铁站C出口东往西2"], [23.237608, 113.285355, "望岗大马路口嘉禾望岗地铁站C出口东往西3"], [23.237431, 113.285176, "望岗大马路口嘉禾望岗地铁站C出口西往东3"], [23.23594, 113.280696, "鹤龙二路望岗塘田街路口北往南"], [23.234369, 113.297381, "新顺路百顺南路口南往北"], [23.231764, 113.275674, "鹤龙二路百花岭北街路口(北往南)"], [23.228592, 113.288201, "启德路康庄路(北往南)"], [23.228354, 113.288126, "启德路康庄路(南往北)"], [23.228476, 113.288284, "启德路康庄路(东往西)"], [23.228475, 113.288028, "启德路康庄路(西往东)"], [23.233433, 113.285677, "彭上德兴路广州医科大学附属市八医院对出(南往北)"], [23.265658, 113.291449, "空港大道上桥位(北往南)"], [22.913769, 113.361154, "市良路南城路(南往北)"], [23.101481, 113.334867, "猎德大道(南往北)"], [23.231025, 113.286089, "康卫路(南往北)"], [23.15391, 113.221305, "青桥街(西往东)"], [23.077875, 113.277789, "江燕路(北往南)"], [23.065296, 113.188867, "龙溪大道凤西二路(西往东)"], [23.169476, 113.318081, "广州大道北银利街路口南往北"], [23.117554, 113.318422, "华利路华穗路南往北"], [23.117775, 113.318346, "华利路华穗路北往南"], [23.116135, 113.3184, "华就路华穗路南往北"], [23.116133, 113.318316, "华就路华穗路北往南"], [23.122596, 113.326057, "农业银行大厦门口花城汇隧道东往西"], [23.097881, 113.336779, "新港东路磨碟沙路口(东往西)"], [23.145267, 113.246736, "内环路A线广园西出口方向"], [23.256468, 113.287056, "新石路(西往东)"], [23.256551, 113.287272, "新石路(东往西)"], [23.229104, 113.28548, "联边彭上德兴路(南往北)"], [23.238405, 113.29003, "望岗大马路口嘉禾望岗地铁站C出口东往西1"], [23.231367, 113.285867, "康卫路(北往南)"], [23.251389, 113.303701, "均禾大道(南往北)"], [23.251452, 113.303503, "均禾大道(北往南)"], [23.111553, 113.379274, "临江大道隧道西往东"], [23.088537, 113.277637, "江南大道南(北往南)"], [23.128908, 113.23004, "内环路A线往珠江大桥方向出口"], [23.095488, 113.310815, "新港西路敦和路口西往东"], [23.213412, 113.227886, "白云湖大道庆丰牌坊(西往东)"], [23.170642, 113.244643, "同德围南北高架横滘货场出口南往北"], [23.139067, 113.235607, "环市西路往西场立交方向"], [23.136659, 113.232898, "南岸路粤电花园进内环路方向"], [23.132496, 113.230202, "南岸路与河柳街南往北"], [23.135569, 113.232191, "内环路B线往西场立交方向"], [23.196206, 113.245079, "石槎路与潭涌路往广州白云站北出发平台上桥位"], [23.196067, 113.245486, "白云二线潭涌路往广州白云站北出发平台方向"], [23.076526, 113.21512, "龙溪中路花涧三街(西往东)"], [23.076653, 113.215215, "龙溪中路花涧三街(东往西)"], [23.094081, 113.283725, "东晓南路昌岗东路(北往南)"], [23.173269, 113.341168, "元岗横路元岗路(东往西)"], [23.142812, 113.228851, "内环路增槎路放射线往广清高速、金沙洲大桥方向"], [23.12418, 113.219049, "桥中南路(北往南)"], [23.094977, 113.306251, "新港西路鹭江西街(西往东)"], [23.095185, 113.306435, "新港西路鹭江西街(东往西)"], [23.077106, 113.277072, "燕翔路(南往北)"], [23.101167, 113.271144, "江南大道中南田路口西往东"], [23.062271, 113.252628, "环翠北路正家广场对出(西往东)"], [23.062392, 113.252773, "环翠北路正家广场对出(东往西)"], [23.095823, 113.313471, "客村立交往鹭江地铁站辅路(东往西)"], [23.055955, 113.251612, "荷景路紫荆路(西往东)"], [23.055985, 113.251827, "荷景路紫荆路(东往西)"], [23.055891, 113.251733, "荷景路紫荆路(南往北)"], [23.056062, 113.251698, "荷景路紫荆路(北往南)"], [23.094481, 113.304021, "新港西路中大对出(南往北)"], [23.055932, 113.249721, "荷景路荷景南路(西往东)"], [23.055955, 113.249929, "荷景路荷景南路(东往西)"], [23.11337, 113.206884, "芳盈路(西往东)"], [23.125342, 113.241911, "中山七路荔湾路(南往北)"], [23.123939, 113.244601, "龙津中路文昌北路口东往西"], [23.247136, 113.308803, "均禾大道东平中路(北往南)"], [23.173466, 113.341073, "元岗横路元岗路(北往南)"], [23.167352, 113.358244, "长兴路美景路(东往西)"], [23.120811, 113.41719, "汇彩路珠衬西横路口南往北"], [23.092515, 113.291025, "新港西路合悦广场对出(西往东)"], [23.108101, 113.259237, "江滨西路宝岗大道(东往西)"], [23.091467, 113.26398, "宝业路(东往西)"], [23.095974, 113.265329, "宝岗大道可逸南街(北往南)"], [23.103852, 113.270963, "江南大道北前进路(南往北)"], [23.07106, 113.294296, "东晓南路东晓南地铁站(北往南)"], [23.088505, 113.327465, "赤岗路碧映路(南往北)"], [23.103625, 113.344085, "芳园路海洲路(东往西)"], [23.103522, 113.343442, "芳园路海洲路(西往东)"], [22.914269, 113.36165, "市良路南城路(北往南)"], [23.102664, 113.317749, "友和路友邻一路(北往南)"], [23.08602, 113.271046, "昌岗路宝岗大道(南往北)"], [23.094716, 113.304119, "新港西路中大对出(北往南)"], [23.096233, 113.321505, "新港中路客村地铁站A出口(东往西)"], [23.161119, 113.328997, "燕岭路燕塘地铁站对出(北往南)"], [23.14673, 113.323838, "林和西路(北往南)"], [23.116333, 113.422247, "林和西路(北往南)"], [23.11631, 113.422231, "护林路(北往南)"], [23.107909, 113.259002, "江滨西路宝岗大道(西往东)"], [23.117345, 113.427162, "珠吉路护林西路(北往南)"], [23.12132, 113.427302, "珠吉路江东广场对出(南往北)"], [23.077705, 113.370178, "仑头隧道入口路段北往南"], [23.163542, 113.346122, "能源路科学院对出(东往西)"], [23.190608, 113.41139, "高普路广汕二路口北往南"], [23.149426, 113.334044, "粤垦路(南往北)"], [23.143762, 113.332285, "天寿路进隧道入口(北往南)"], [23.139938, 113.332983, "天河东路隧道出口(北往南)"], [23.138431, 113.274278, "北较场路小北路口西往东"], [23.114105, 113.285034, "大沙头路大沙头三马路东往西"], [23.111227, 113.297856, "大通路砥柱街路口东往西"], [23.131943, 113.307863, "东风东路梅东路口东往西"], [23.131792, 113.307459, "东风东路梅东路口西往东"], [23.13115, 113.274772, "东风中路东建大厦路段人行道东往西"], [23.128649, 113.262719, "府前路府前大厦路段人行道西往东"], [23.154144, 113.288892, "广园中路白云山管理局对出路段西往东"], [23.134265, 113.266087, "吉祥路应元路口南往北"], [23.128622, 113.263322, "连新路府前路路口南往北"], [23.136648, 113.294996, "先烈南路区庄立交项层下桥位南往北"], [23.109089, 113.305155, "烟雨路海山街路口西往东"], [23.113525, 113.284176, "沿江东路大沙头三马路路口西往东"], [23.112135, 113.263479, "沿江西路解放南路路口西往东"], [23.131331, 113.387639, "中山大道棠东牌坊东往西"], [23.131321, 113.387447, "中山大道棠东牌坊西往东"], [23.122834, 113.332835, "猎德大道金穗路隧道出口东往西"], [23.113998, 113.416676, "汇彩路盈彩美居西门路口北往南"], [23.116044, 113.421467, "中山大道天河珠村地铁b口西往东"], [23.117322, 113.419735, "中山大道珠村牌坊路段东往西"], [23.123875, 113.40209, "中山大道东圃站BRT东往西"], [23.123653, 113.401884, "中山大道东圃站BRT西往东"], [23.163277, 113.323473, "沙太南路马蹄岗大街对出南往北"], [23.119051, 113.413086, "中山大道桃园路口南往北"], [23.128605, 113.32807, "体育东路体育西横街北往南"], [23.131662, 113.3431, "石牌东路人社局路段北往南"], [23.11384, 113.340864, "海风路海月路口北往南"], [23.168515, 113.382818, "华观路岑村路口东往西"], [23.136009, 113.342399, "天河路五山路口北往南"], [23.166554, 113.414202, "科学大道科学大道隧道西往东"], [23.115822, 113.208284, "芳村大道西滘口客运站对出东往西"], [23.042457, 113.214804, "花地大道南沙尾桥南往北"], [23.04486, 113.215766, "花地大道南沙尾桥南往北2"], [23.09381, 113.28449, "新港西路东晓路口东往西"], [23.082103, 113.260582, "鹤洞大桥桥中东往西"], [23.081978, 113.260654, "鹤洞大桥桥中西往东"], [23.11423, 113.279579, "内环路A线江湾桥出口路段(西往东)"], [23.371065, 113.395547, "广从路广龙路口跨线桥上桥位南往北"], [23.278954, 113.244159, "广花路江人隧道入口南往北"], [23.257092, 113.250185, "广花路石马隧道入口北往南"], [23.298244, 113.240065, "广花路塘贝隧道入口南往北"], [23.119448, 113.290231, "合群一马路95号路段西往东"], [23.117921, 113.296106, "新河浦路恤孤院路口东往西"], [23.131446, 113.263803, "东风中路296号对出路段西往东"], [23.125573, 113.301751, "中山一路达道路口东往西"], [23.115957, 113.422249, "中山大道护林路口东往西"], [23.15155, 113.313169, "禺东西路广州大道北路口西往东"], [23.127066, 113.329412, "黄埔大道冼村公交站路段西往东"], [23.124013, 113.318837, "金穗路华穗路口东往西"], [23.121055, 113.41698, "汇彩路珠村西横路口北往南"], [23.131888, 113.366695, "中山大道上社BRT路段西往东"], [23.132143, 113.366938, "中山大道上社BRT路段东往西"], [23.118537, 113.417177, "中山大道汇彩路口东往西"], [23.133456, 113.331635, "天河路石牌桥BRT东往西"], [23.133277, 113.331611, "天河路石牌桥BRT西往东"], [23.099871, 113.232627, "芳村大道中东漖北路口南往北"], [23.093701, 113.233958, "花地大道北荣兴路口南往北"], [23.065517, 113.189257, "龙溪大道科技园路口东往西"], [23.101251, 113.343539, "海洲路琶洲大道路口西往东"], [23.09878, 113.34384, "新港东路海洲路口东往西"], [23.098119, 113.371709, "新港东路科韵立交西往东掉头位"], [23.074118, 113.370001, "仑头隧道入口路段北往南"], [23.062248, 113.292166, "工业大道南大干围路口西往东"], [23.222692, 113.216586, "石沙路湖滨南路隧道东往西"], [23.222613, 113.216592, "石沙路湖滨南路隧道西往东"], [23.234773, 113.189162, "鸦岗大道广和大桥下桥位南往北"], [23.234944, 113.189188, "鸦岗大道广和大桥上桥位北往南"], [23.269603, 113.408412, "兴太二路白山白良路口东往西"], [23.317919, 113.358329, "沙亭北路广从三路辅路口东往西"], [23.24419, 113.348206, "黄庄北路大源南路口北往南"], [23.131422, 113.267716, "东风中路正南路口人行道东往西"], [23.299106, 113.353412, "太和北路谢家庄牌坊对出(南往北)"], [23.167265, 113.357703, "长兴路美景路(西往东)"], [23.133351, 113.244814, "荔湾路彩虹桥地铁站D出口(北往南)"], [23.14562, 113.325497, "林和中路广州东站广场对出(南往北)"], [23.118565, 113.416553, "中山大道汇彩路口西往东"], [23.097742, 113.336702, "新港东路磨碟沙路口西往东"], [23.103551, 113.337841, "芳园路数创路口西往东"], [23.103608, 113.33803, "芳园路数创路口东往西"], [23.251105, 113.352697, "大源中路大源东路口北往南"], [23.122595, 113.334278, "猎德大道金穗路隧道出口西往东"], [23.114947, 113.282557, "东街路大沙头路口北往南"], [23.122724, 113.291469, "东湖西路东华南路口东往西"], [23.415964, 113.470012, "广从十路九佛西路口南往北"], [23.116944, 113.426968, "护林路珠吉路口西往东"], [23.154596, 113.293642, "广园东路云山南路口东往西"], [23.210209, 113.264138, "鹤龙一路龙石隧道入口东往西"], [23.143942, 113.290921, "恒福路永福路口西往东"], [23.103651, 113.348232, "芳园路华轩北街路口东往西"], [23.103499, 113.348155, "芳园路华轩北街路口南往北"], [23.101838, 113.340163, "琶洲大道耕耘北路路口东往西"], [23.095638, 113.333519, "江梅大道石榴岗路口南往北"], [23.091667, 113.233299, "花地大道北花蕾路口西往东"], [23.06139, 113.23048, "花地大道南南安大街路口北往南"], [23.061127, 113.23042, "花地大道南南安大街路口南往北"], [23.134981, 113.244894, "东风西路荔湾路口上桥位东往西"], [23.091981, 113.233464, "花地大道北花蕾路口北往南"], [23.092032, 113.233724, "花地大道北花蕾路口东往西"], [23.07014, 113.233027, "花地大道中金道花园北往南"], [23.141596, 113.377281, "科韵路广园快速跨线桥上桥位北往南"], [23.128034, 113.319106, "黄埔大道中山一立交东风路跨线桥上桥位东往西"], [23.305352, 113.352605, "沙太南路广从路口北住南"], [23.136199, 113.315142, "广州大道中天河立交上桥位北往南"], [23.141498, 113.335922, "龙口西路天河北路口西往东"], [23.124968, 113.427379, "广园快速路珠吉路口南往北"], [23.147961, 113.336467, "广园快速路天寿立交上桥位东往西"], [23.191172, 113.382301, "广汕路广星仓储人行天桥路段西往东"], [23.210547, 113.317899, "同泰路南湖西路口西往东"], [23.293127, 113.293954, "空港大道清南路口南往北"], [23.180112, 113.241264, "德康路怡康路路口西往东"], [23.180219, 113.241512, "德康路怡康路路口东往西"], [23.094166, 113.241279, "花蕾路芳村大道(西往东)"], [23.094647, 113.242176, "花蕾路芳村大道(东往西)"], [23.093844, 113.242229, "花蕾路芳村大道(南往北)"], [23.094621, 113.241471, "花蕾路芳村大道(北往南)"], [23.085799, 113.267913, "昌岗中路宝岗大道地铁站对出(北往南)"], [23.092923, 113.289435, "新港西路(东往西)"], [23.093586, 113.283065, "昌岗东路地铁站对出(东往西)"], [23.096194, 113.327641, "新港中路赤岗北路口段西往东"], [23.295773, 113.343519, "广从三路北太路(西往东)"], [23.102018, 113.317797, "友和路友邻一路(南往北)"], [23.112128, 113.28952, "大通路(东往西)"], [23.216412, 113.235359, "石井大道金宝路口(南往北)"], [23.216639, 113.235325, "石井大道金宝路口(北往南)"], [23.228018, 113.28941, "空港大道启德路(西往东)"], [23.227896, 113.290068, "空港大道启德路(东往西)"], [23.141595, 113.336303, "龙口西路天河北路口东往西"], [23.29432, 113.354791, "太和中路太营路(西往东)"], [23.272484, 113.354375, "大源北路(北往南)"], [23.14321, 113.328346, "林和东路林乐路(北往南)"], [23.254225, 113.261836, "新石路加石路(西往东)"], [23.254356, 113.262009, "新石路加石路(东往西)"], [23.218674, 113.2697, "鹤龙一路鹤龙东路口(东往西)"], [23.233465, 113.2859, "彭上德兴路广州医科大学附属市八医院对出(北往南)"], [23.218131, 113.281028, "鹤龙东路云启路(西往东)"], [23.217576, 113.28504, "广云路鹤龙东路口(南往北)"], [23.230833, 113.290796, "空港大道康卫路(南往北)"], [23.146744, 113.332747, "天寿路(北往南)"], [23.086598, 113.285695, "南泰路泰沙路(北往南)"], [23.085983, 113.285789, "南泰路泰沙路(南往北)"], [23.255908, 113.291506, "鹤龙二路新石路(东往西)"], [23.126678, 113.315359, "广州大道中(南往北)"], [23.229277, 113.285677, "联边彭上德兴路(东往西)"], [23.218455, 113.275216, "鹤龙东路(东往西)"], [23.218308, 113.274892, "鹤龙东路(西往东)"], [23.172372, 113.225233, "增槎路与江南一路口南往北"], [23.131116, 113.32374, "天河南一路天河城大街(西往东)"], [23.203927, 113.272526, "黄石东路(西往东)"], [23.203843, 113.270943, "黄石东路(东往西)"], [23.218516, 113.281215, "鹤龙东路云启路(北往南)"], [23.218216, 113.281635, "鹤龙东路云启路(东往西)"], [23.264352, 113.293763, "鹤龙三路龙济医院对出(北往南)"], [23.149154, 113.19714, "沙凤一路(西往东)"], [23.149283, 113.197137, "沙凤一路(东往西)"], [23.229548, 113.28545, "联边彭上德兴路(北往南)"], [23.094026, 113.269438, "江南西路青柳大街(西往东)"], [23.104272, 113.259244, "同福西路南武中学对出(西往东)"], [23.092879, 113.267191, "宝岗大道江南西路口(南往北)"], [23.112859, 113.2881, "东湖路大沙头路口(南往北)"], [23.113071, 113.288027, "东湖路大沙头路口(北往南)"], [23.101195, 113.340056, "琶洲大道耕耘南路(南往北)"], [23.103402, 113.343874, "芳园路海洲路(南往北)"], [23.103658, 113.343722, "芳园路海洲路(北往南)"], [23.103511, 113.345807, "芳园路美居北街(西往东)"], [23.10358, 113.346189, "芳园路美居北街(东往西)"], [23.102213, 113.346039, "美居北街聚新街(南往北)"], [23.104939, 113.345847, "美居北街鼎新路(东往西)"], [23.279909, 113.304247, "鹤龙四路龙河西路(南往北)"], [22.923562, 113.34762, "福龙路西环路(西往东)"], [22.923588, 113.348487, "福龙路西环路(东往西)"], [23.078227, 113.224898, "东漖南路东漖北路(西往东)"], [23.173078, 113.340901, "元岗横路元岗路(南往北)"], [23.173592, 113.340618, "元岗横路元岗路(西往东)"], [23.276002, 113.318015, "龙悦南路钟永中路(西往东)"], [23.276124, 113.318498, "龙悦南路钟永中路(东往西)"], [23.275791, 113.318268, "龙悦南路钟永中路(南往北)"], [23.276318, 113.318171, "龙悦南路钟永中路(北往南)"], [23.144418, 113.207936, "藤业二路白云中学对出(西往东)"], [23.330928, 113.29931, "鹤龙六路人和大街(南往北)"], [23.331177, 113.299422, "鹤龙六路人和大街(北往南)"], [23.257396, 113.357216, "大源北路维城街路口南往北"], [23.142941, 113.211656, "彩滨南路(南往北)"], [23.277796, 113.29195, "白云五线空港大道(南往北)"], [23.278521, 113.291623, "白云五线空港大道(北往南)"], [23.278364, 113.285599, "白云五线园夏牌坊大街(东往西)"], [23.278193, 113.285173, "白云五线园夏牌坊大街(西往东)"], [23.068226, 113.240895, "荔勤北路崇文四路(南往北)"], [23.068524, 113.24093, "荔勤北路崇文四路(东往西)"], [23.06855, 113.2406, "荔勤北路崇文四路(北往南)"], [23.06829, 113.240571, "荔勤北路崇文四路(西往东)"], [23.078274, 113.222109, "东漖南路(西往东)"], [23.078333, 113.222298, "东漖南路(东往西)"], [23.256112, 113.291281, "鹤龙二路新石路(北往南)"], [23.19603, 113.276669, "云城西路培英中学对出(南往北)"], [23.196447, 113.276643, "云城西路培英中学对出(北往南)"], [23.196174, 113.276997, "云城西路培英中学对出(东往西)"], [23.139132, 113.278965, "环市东路(西往东)"], [23.223062, 113.223581, "秀亭一路湖滨西路(东往西)"], [23.222958, 113.223152, "秀亭一路湖滨西路(西往东)"], [23.223122, 113.22321, "秀亭一路湖滨西路(北往南)"], [23.222911, 113.223451, "秀亭一路湖滨西路(南往北)"], [23.137897, 113.433806, "珠吉路至信路(南往北)"], [23.440024, 113.188647, "狮岭大道工商学院牌坊路口(北往南)"], [23.466302, 113.223356, "金狮大道旗岭大街路口(东往西)"], [23.468633, 113.156247, "金狮大道盘古路口(南往北)"], [23.295981, 113.345067, "广从三路北太路(东往西)"], [23.362101, 113.370071, "竹料大道东(东往西)"], [23.362178, 113.369688, "竹料大道东(西往东)"], [23.147998, 113.298955, "恒福路(南往北)"], [23.269685, 113.352591, "大源北路石湖军民路口北往南"], [23.275167, 113.356182, "大源北路长盛产业园路口(南往北)"], [23.278641, 113.357358, "大源北路(南往北)"], [23.28406, 113.362897, "大源北路米龙和虎路(南往北)"], [23.292597, 113.356509, "太和中路(东往西)"], [23.312007, 113.355381, "广从三路(北往南)"], [23.316789, 113.357334, "广从三路(南往北)"], [23.077037, 113.276989, "燕翔路(北往南)"], [23.145696, 113.261395, "大北立交西往东2"], [23.145429, 113.261898, "解放北路大北立交南往北"], [23.119441, 113.363053, "员村二横路(北往南)"], [23.178967, 113.320555, "广州大道北梅花园广场对出(南往北)"], [23.219863, 113.30696, "同泰路永泰地铁站对出(西往东)"], [22.940161, 113.366061, "大北路(大北路天桥)与环城中路路口南出口路段2(北往南)"], [23.165293, 113.403406, "高唐路新岑四路口南往北"], [23.238236, 113.281773, "鹤龙二路望岗陈屋墙街路口北往南"], [23.235996, 113.297479, "百顺北路(东往西)"], [23.235923, 113.297432, "百顺北路(南往北)"], [23.091233, 113.263383, "宝业路西华北直街路口(西往东)"], [23.146906, 113.202889, "藤业一路环洲三路(西往东)"], [23.146741, 113.20318, "藤业一路环洲三路(南往北)"], [23.098047, 113.379804, "新港东路执信中学门口东往西"], [23.16556, 113.403219, "高唐路新岑四路口北往南"], [23.165413, 113.403122, "高唐路新岑四路口西往东"], [23.165456, 113.403488, "高唐路新岑四路口东往西"], [23.137148, 113.395671, "天坤二路健明四路东往西"], [23.136986, 113.395219, "天坤二路健明四路西往东"], [23.167634, 113.404024, "华观路高唐路口东往西"], [23.167131, 113.403481, "华观路高唐路口南往北"], [23.170642, 113.410468, "软件路高普路口东往西"], [23.151604, 113.409508, "大观路新塘大街路口西往东"], [23.119773, 113.306736, "寺右新马路寺右二横路口西往东"], [23.067125, 113.287683, "工业大道南(西往东)"], [23.078582, 113.238591, "花溪路坑口电子基地对出路段南往北"], [23.078788, 113.238508, "花溪路坑口电子基地对出路段北往南"], [22.94052, 113.366015, "大北路(大北路天桥)与环城中路路口南出口路段1(北往南)"], [22.958222, 113.383951, "番禺大道北蔡一环村路对出高架路段(南往北)"], [22.973099, 113.366615, "番禺大道北信业悦都汇对出龙门架路段(北往南)"], [23.042323, 113.303945, "洛溪大桥交管四中队对开上桥位路段(南往北)"], [23.059677, 113.295599, "广南快速路入口(海珠湾隧道南侧)路段(北往南)"], [22.907369, 113.351954, "市良路与西环路路口(东往西)"], [23.043454, 113.372465, "大学城中环西路与红棉路路口(南往北)"], [23.043679, 113.372443, "大学城中环西路与红棉路路口(北往南)"], [23.059955, 113.395513, "大学城广外西路与贝岗村大街路口(北往南)"], [23.103604, 113.340095, "芳园路(东往西)"], [23.103543, 113.339925, "芳园路(西往东)"], [23.103481, 113.340006, "芳园路(南往北)"], [23.098778, 113.347, "新港东路(东往西)"], [23.101283, 113.339913, "琶洲大道耕耘南路(西往东)"], [23.101277, 113.343898, "海洲路琶洲大道路口东往西"], [23.167014, 113.409733, "华观路高普路(西往东)"], [23.167313, 113.410038, "华观路高普路(北往南)"], [23.166419, 113.414286, "科学大道(西往东)"], [23.154108, 113.298764, "广园路金贵村公交站天桥(西往东)"], [23.141511, 113.328748, "天河北路林和东路(东往西)"], [23.141355, 113.328131, "天河北路林和东路(西往东)"], [23.14168, 113.328356, "天河北路林和东路(北往南)"], [23.13111, 113.3234, "天河南一路天河城大街(东往西)"], [23.131016, 113.32565, "天河南一路正佳路口西往东"], [23.159773, 113.263407, "广园中路上机场立交往解放北路方向"], [23.131815, 113.308144, "东风东路梅东路口西往东2"], [23.190947, 113.425741, "广汕三路(西往东)"], [23.119106, 113.25287, "人民中路东升医院对出路段北往南"], [23.294765, 113.314042, "北太路(西往东)"], [23.104861, 113.413837, "东圃大马路天河区人民医院路段南往北"], [23.118383, 113.3237, "珠江西路"], [22.909752, 113.350837, "中华大道西环路路口(东往西)"], [23.116844, 113.400888, "东圃大马路天河区人民医院路段南往北"], [23.159902, 113.414822, "大观中路(南往北)"], [23.364893, 113.28083, "迎宾大道文记碌鹅路口西往东"], [23.36504, 113.281153, "迎宾大道文记碌鹅路口东往西"], [23.19308, 113.371654, "广汕一路华快入口路段东往西"], [23.117515, 113.385038, "黄埔大道东羊城创意园对出路段东往西"], [23.120064, 113.26437, "广州起义路(南往北)"], [23.11675, 113.282269, "东华南路(南往北)"], [23.154779, 113.302767, "广园东路永福路口东往西"], [23.0868, 113.270485, "宝岗大道(北往南)"], [23.140418, 113.215279, "广佛大桥西往东沿江路下桥路段"], [23.108129, 113.31079, "烟雨路玉宇街路口西往东"], [23.111167, 113.297705, "大通路砥柱街路口北往南"], [23.143148, 113.301958, "先烈中路永福路口北往南2"], [23.184122, 113.324998, "广州大道北京溪路口南往北"], [23.263663, 113.293738, "鹤龙三路长红村路口南往北"], [23.331024, 113.299461, "鹤龙六路人和大街路口东往西"], [23.352735, 113.271567, "鹤龙八路和瑞路口东往西"], [23.067099, 113.291659, "江南大道南江晓路口北往南"], [23.13999, 113.392367, "天坤三路健明五路北往南"], [23.094153, 113.269528, "江南西路青柳大街路口东往西"], [23.106534, 113.333778, "阅江西路磨碟沙路口西往东"], [23.123075, 113.247088, "康王中路龙津东路口北往南"], [23.122847, 113.247208, "康王中路龙津东路口南往北"], [23.119543, 113.213667, "珠江大桥西桥东往西"], [23.082326, 113.238776, "浣花路花湾路口北往南"], [23.11312, 113.207427, "芳盈路滘口客运站路口东往西"], [23.152516, 113.316139, "禺东西路富信大厦对出路口东往西"], [23.124472, 113.39187, "中山大道中车陂路口西往东"], [23.116112, 113.390047, "黄埔大道车陂路口北往南"], [23.101263, 113.368617, "会展东路琶洲大道路口北往南"], [23.100806, 113.368732, "会展东路琶洲大道路口南往北"], [23.145974, 113.3327, "天寿路水利厅对出南往北"], [23.12964, 113.337936, "石牌西路海欣街路口南往北"], [23.117755, 113.321085, "华夏路华利路口北往南"], [23.117501, 113.321232, "华夏路华利路口南往北"], [23.138433, 113.389162, "天坤二路健明六路北往南"], [23.117343, 113.348024, "花城大道潭村路口东往西"], [23.117142, 113.347486, "花城大道潭村路口西往东"], [23.113414, 113.343207, "马场路海月路口北往南"], [23.27808, 113.291384, "白云五线空港大道路口(西往东)"], [23.278318, 113.292198, "白云五线空港大道路口(东往西)"], [23.177672, 113.338243, "元岗横路元岗路口西往东"], [23.177638, 113.338393, "元岗横路元岗路口东往西"], [23.195497, 113.364817, "迎龙路司法警官学院对出路段北往南"], [23.191733, 113.366511, "天源路迎龙路口北往南"], [23.148429, 113.298959, "恒福路永福路口东往西"], [23.145759, 113.304279, "先烈中路市委党校门口路段东往西"], [23.126956, 113.282307, "中山三路中山陵园西路口西往东"], [23.119661, 113.309937, "寺右新马路寺右二马路口西往东"], [23.110367, 113.301296, "大通路烟雨路口西往东"], [23.13122, 113.2979, "农林下路东风路口北往南"], [23.119551, 113.264444, "起义路大南路口南往北"], [23.125482, 113.262131, "中山六路解放路口北往南"], [23.1254, 113.262465, "中山六路解放路口东往西"], [23.071142, 113.297604, "南洲北路孙逸仙纪念医院南院区北门路段"], [23.307653, 113.391658, "太和镇S115头陂小学路口(东往西)"], [23.295609, 113.335089, "北太路民营科技园路口(东往西)"]];
+
+    /* ==========================================================================
+       2. WGS-84 转 GCJ-02 高精度纠偏算法
+       ========================================================================== */
+    const CoordTransform = {
+      PI: 3.1415926535897932384626,
+      a: 6378245.0,
+      ee: 0.00669342162296594323,
+      transformLat: function(x, y) {
+        let ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
+        ret += (20.0 * Math.sin(6.0 * x * this.PI) + 20.0 * Math.sin(2.0 * x * this.PI)) * 2.0 / 3.0;
+        ret += (20.0 * Math.sin(y * this.PI) + 40.0 * Math.sin(y / 3.0 * this.PI)) * 2.0 / 3.0;
+        ret += (160.0 * Math.sin(y / 12.0 * this.PI) + 320 * Math.sin(y * this.PI / 30.0)) * 2.0 / 3.0;
+        return ret;
+      },
+      transformLng: function(x, y) {
+        let ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
+        ret += (20.0 * Math.sin(6.0 * x * this.PI) + 20.0 * Math.sin(2.0 * x * this.PI)) * 2.0 / 3.0;
+        ret += (20.0 * Math.sin(x * this.PI) + 40.0 * Math.sin(x / 3.0 * this.PI)) * 2.0 / 3.0;
+        ret += (150.0 * Math.sin(x / 12.0 * this.PI) + 300.0 * Math.sin(x / 3.0 * this.PI)) * 2.0 / 3.0;
+        return ret;
+      },
+      wgs84ToGcj02: function(lng, lat) {
+        let dLat = this.transformLat(lng - 105.0, lat - 35.0);
+        let dLng = this.transformLng(lng - 105.0, lat - 35.0);
+        const radLat = lat / 180.0 * this.PI;
+        let magic = Math.sin(radLat);
+        magic = 1 - this.ee * magic * magic;
+        const sqrtMagic = Math.sqrt(magic);
+        dLat = (dLat * 180.0) / ((this.a * (1 - this.ee)) / (magic * sqrtMagic) * this.PI);
+        dLng = (dLng * 180.0) / (this.a / sqrtMagic * Math.cos(radLat) * this.PI);
+        return [lng + dLng, lat + dLat];
+      }
+    };
+
+    /* ==========================================================================
+       3. 地理几何与大圆航向推算
+       ========================================================================== */
+    const MathUtils = {
+      DEG_TO_RAD: Math.PI / 180,
+      RAD_TO_DEG: 180 / Math.PI,
+      EARTH_RADIUS: 6371000,
+      getDistance: function(lat1, lon1, lat2, lon2) {
+        const dLat = (lat2 - lat1) * this.DEG_TO_RAD;
+        const dLon = (lon2 - lon1) * this.DEG_TO_RAD;
+        const a = Math.sin(dLat / 2) ** 2 +
+                  Math.cos(lat1 * this.DEG_TO_RAD) * Math.cos(lat2 * this.DEG_TO_RAD) *
+                  Math.sin(dLon / 2) ** 2;
+        return this.EARTH_RADIUS * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      },
+      getBearing: function(lat1, lon1, lat2, lon2) {
+        const φ1 = lat1 * this.DEG_TO_RAD;
+        const φ2 = lat2 * this.DEG_TO_RAD;
+        const Δλ = (lon2 - lon1) * this.DEG_TO_RAD;
+        const y = Math.sin(Δλ) * Math.cos(φ2);
+        const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+        return (Math.atan2(y, x) * this.RAD_TO_DEG + 360) % 360;
+      },
+      getAngleDiff: function(a, b) {
+        const diff = Math.abs(a - b) % 360;
+        return diff > 180 ? 360 - diff : diff;
+      },
+      calculateDestinationPoint: function(lat, lng, distMeters, bearingDeg) {
+        const rad = bearingDeg * this.DEG_TO_RAD;
+        const dLat = (distMeters * Math.cos(rad)) / this.EARTH_RADIUS * this.RAD_TO_DEG;
+        const dLng = (distMeters * Math.sin(rad)) / (this.EARTH_RADIUS * Math.cos(lat * this.DEG_TO_RAD)) * this.RAD_TO_DEG;
+        return [lat + dLat, lng + dLng];
+      },
+      clamp: function(v, min, max) { return Math.max(min, Math.min(max, v)); }
+    };
+
+    function headingToText(deg) {
+      const dirs = ['正北', '东北', '正东', '东南', '正南', '西南', '正西', '西北'];
+      const index = Math.round(deg / 45) % 8;
+      return `${dirs[index]} ${Math.round(deg)}°`;
+    }
+
+    /* ==========================================================================
+       4. 算法核心 1: 点位语义方向识别与对向车道静音过滤
+       ========================================================================== */
+    const CARDINAL_HEADINGS = {
+      '北': 0, '东北': 45, '东': 90, '东南': 135,
+      '南': 180, '西南': 225, '西': 270, '西北': 315
+    };
+
+    class PointDirectionParser {
+      constructor() {
+        this.cache = new Map();
+        this.regexPair = /(?:由)?(东北|东南|西北|西南|东|南|西|北)[往至到向](东北|东南|西北|西南|东|南|西|北)/g;
+        this.regexXing = /(东北|东南|西北|西南|东|南|西|北)行/g;
+        this.regexParenSingle = /[（(](?:往|向|朝)?(东北|东南|西北|西南|东|南|西|北)[)）]/;
+        this.regexBi = /双向/;
+      }
+
+      parsePointDirection(title) {
+        if (!title || typeof title !== 'string') {
+          return { directionText: '全向/路口', controlledHeading: null, isOmnidirectional: true, toleranceDeg: 180 };
+        }
+        if (this.cache.has(title)) return this.cache.get(title);
+
+        if (this.regexBi.test(title)) {
+          const res = { directionText: '双向', controlledHeading: null, isOmnidirectional: true, toleranceDeg: 180 };
+          this.cache.set(title, res);
+          return res;
+        }
+
+        this.regexPair.lastIndex = 0;
+        let mPair = null, match;
+        while ((match = this.regexPair.exec(title)) !== null) mPair = match;
+
+        if (mPair) {
+          const res = {
+            directionText: `${mPair[1]}往${mPair[2]}`,
+            fromDir: mPair[1],
+            toDir: mPair[2],
+            controlledHeading: CARDINAL_HEADINGS[mPair[2]], // 东往西 => 西 270°
+            isOmnidirectional: false,
+            toleranceDeg: 45
+          };
+          this.cache.set(title, res);
+          return res;
+        }
+
+        this.regexXing.lastIndex = 0;
+        let mXing = null;
+        while ((match = this.regexXing.exec(title)) !== null) mXing = match;
+        if (mXing) {
+          const res = {
+            directionText: `${mXing[1]}行`,
+            controlledHeading: CARDINAL_HEADINGS[mXing[1]],
+            isOmnidirectional: false,
+            toleranceDeg: 45
+          };
+          this.cache.set(title, res);
+          return res;
+        }
+
+        const mParen = this.regexParenSingle.exec(title);
+        if (mParen) {
+          const res = {
+            directionText: `往${mParen[1]}`,
+            controlledHeading: CARDINAL_HEADINGS[mParen[1]],
+            isOmnidirectional: false,
+            toleranceDeg: 45
+          };
+          this.cache.set(title, res);
+          return res;
+        }
+
+        const res = { directionText: '全向/路口', controlledHeading: null, isOmnidirectional: true, toleranceDeg: 180 };
+        this.cache.set(title, res);
+        return res;
+      }
+
+      evaluateRiderHeading(riderHeading, dirInfo) {
+        if (!dirInfo || dirInfo.isOmnidirectional || dirInfo.controlledHeading === null) {
+          return { shouldAlert: true, relation: 'omnidirectional' };
+        }
+        const diff = MathUtils.getAngleDiff(riderHeading, dirInfo.controlledHeading);
+        if (diff <= dirInfo.toleranceDeg) {
+          return { shouldAlert: true, relation: 'same_direction', diff: Math.round(diff) };
+        } else if (diff >= 135) {
+          return { shouldAlert: false, relation: 'opposite_direction', diff: Math.round(diff) };
+        } else {
+          return { shouldAlert: false, relation: 'cross_direction', diff: Math.round(diff) };
+        }
+      }
+    }
+
+    /* ==========================================================================
+       5. 算法核心 2: 车速自适应预警距离引擎 (10~40 km/h 动态平滑)
+       ========================================================================== */
+    class SpeedAdaptiveWarningEngine {
+      constructor() {
+        this.targetLeadTimeSec = 13.5;
+        this.minDistance = 60.0;
+        this.maxDistance = 180.0;
+        this.currentDistance = 120.0;
+        this.filteredSpeedKmh = 28.0;
+        this.speedAlpha = 0.25;
+      }
+
+      update(rawSpeedKmh) {
+        const safeSpeed = Math.max(0, typeof rawSpeedKmh === 'number' && !isNaN(rawSpeedKmh) ? rawSpeedKmh : 0);
+        this.filteredSpeedKmh = this.filteredSpeedKmh * (1 - this.speedAlpha) + safeSpeed * this.speedAlpha;
+
+        const speedMs = this.filteredSpeedKmh / 3.6;
+        const ideal = MathUtils.clamp(speedMs * this.targetLeadTimeSec + 8.0, this.minDistance, this.maxDistance);
+        
+        this.currentDistance += (ideal - this.currentDistance) * 0.2;
+        return Math.round(this.currentDistance);
+      }
+    }
+
+    /* ==========================================================================
+       6. 算法核心 3: GPS 航向抗抖动与红绿灯静止锁存引擎
+       ========================================================================== */
+    class HeadingFilterAndLockEngine {
+      constructor() {
+        this.stopSpeedThreshold = 3.0;
+        this.moveSpeedThreshold = 4.5;
+        this.isStationary = true;
+        this.heading = 270;
+        this.lastCruisingHeading = 270;
+        this.vecX = -1;
+        this.vecY = 0;
+      }
+
+      update(rawHeading, speedKmh) {
+        const currentSpeed = Math.max(0, typeof speedKmh === 'number' && !isNaN(speedKmh) ? speedKmh : 0);
+
+        if (this.isStationary) {
+          if (currentSpeed >= this.moveSpeedThreshold) this.isStationary = false;
+        } else {
+          if (currentSpeed < this.stopSpeedThreshold) {
+            this.isStationary = true;
+            this.lastCruisingHeading = this.heading;
+          }
+        }
+
+        if (this.isStationary) {
+          return this.lastCruisingHeading;
+        }
+
+        if (typeof rawHeading === 'number' && !isNaN(rawHeading) && rawHeading >= 0) {
+          const targetRad = rawHeading * MathUtils.DEG_TO_RAD;
+          const alpha = 0.35;
+          this.vecX = (1 - alpha) * this.vecX + alpha * Math.sin(targetRad);
+          this.vecY = (1 - alpha) * this.vecY + alpha * Math.cos(targetRad);
+          const norm = Math.hypot(this.vecX, this.vecY);
+          if (norm > 1e-6) {
+            this.vecX /= norm;
+            this.vecY /= norm;
+          }
+          this.heading = (Math.atan2(this.vecX, this.vecY) * MathUtils.RAD_TO_DEG + 360) % 360;
+          this.lastCruisingHeading = this.heading;
+        }
+        return this.heading;
+      }
+    }
+
+    /* ==========================================================================
+       7. 专业声音工程: 车规级 Web Audio 双音和弦 + 释压通过音 + 文本精简
+       ========================================================================== */
+    class AudioEngine {
+      constructor() {
+        this.enabled = true;
+        this.audioCtx = null;
+        this.synth = window.speechSynthesis;
+        this.lastSpokenText = '';
+        this.lastSpokenTime = 0;
+      }
+
+      init() {
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!this.audioCtx) this.audioCtx = new AudioContext();
+          if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+
+          const buffer = this.audioCtx.createBuffer(1, 1, 22050);
+          const src = this.audioCtx.createBufferSource();
+          src.buffer = buffer;
+          src.connect(this.audioCtx.destination);
+          src.start(0);
+
+          if (this.synth) {
+            const dummy = new SpeechSynthesisUtterance('');
+            dummy.volume = 0;
+            this.synth.speak(dummy);
+          }
+        } catch (e) {}
+      }
+
+      resumeContext() {
+        if (this.audioCtx && this.audioCtx.state === 'suspended') this.audioCtx.resume();
+      }
+
+      playApproachChime() {
+        if (!this.enabled || !this.audioCtx) return;
+        this.resumeContext();
+        try {
+          const ctx = this.audioCtx;
+          const now = ctx.currentTime;
+          const masterGain = ctx.createGain();
+          masterGain.gain.setValueAtTime(0.5, now);
+
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(4500, now);
+          filter.Q.setValueAtTime(0.85, now);
+          masterGain.connect(filter);
+          filter.connect(ctx.destination);
+
+          const playHarmonic = (freq, startTime, dur, vol) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, startTime);
+            gain.gain.setValueAtTime(0.0001, startTime);
+            gain.gain.exponentialRampToValueAtTime(vol, startTime + 0.005);
+            gain.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
+            osc.connect(gain);
+            gain.connect(masterGain);
+            osc.start(startTime);
+            osc.stop(startTime + dur);
+
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(freq * 2, startTime);
+            gain2.gain.setValueAtTime(0.0001, startTime);
+            gain2.gain.exponentialRampToValueAtTime(vol * 0.25, startTime + 0.004);
+            gain2.gain.exponentialRampToValueAtTime(0.0001, startTime + dur * 0.65);
+            osc2.connect(gain2);
+            gain2.connect(masterGain);
+            osc2.start(startTime);
+            osc2.stop(startTime + dur);
+          };
+
+          playHarmonic(880, now, 0.18, 0.45);
+          playHarmonic(1174.66, now + 0.115, 0.26, 0.40);
+        } catch (e) {}
+      }
+
+      playPassConfirmSound() {
+        if (!this.enabled || !this.audioCtx) return;
+        this.resumeContext();
+        try {
+          const ctx = this.audioCtx;
+          const now = ctx.currentTime;
+          const masterGain = ctx.createGain();
+          masterGain.gain.setValueAtTime(0.4, now);
+
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(1200, now);
+          masterGain.connect(filter);
+          filter.connect(ctx.destination);
+
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.exponentialRampToValueAtTime(392.00, now + 0.18);
+          gain.gain.setValueAtTime(0.0001, now);
+          gain.gain.exponentialRampToValueAtTime(0.35, now + 0.012);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+          osc.connect(gain);
+          gain.connect(masterGain);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } catch (e) {}
+      }
+
+      speak(text, priority = false) {
+        if (!this.enabled || !this.synth) return;
+        const now = Date.now();
+        if (!priority && text === this.lastSpokenText && (now - this.lastSpokenTime) < 4000) return;
+        this.lastSpokenText = text;
+        this.lastSpokenTime = now;
+
+        try {
+          this.synth.cancel();
+          const utter = new SpeechSynthesisUtterance(text);
+          utter.lang = 'zh-CN';
+          utter.rate = 1.12;
+          utter.pitch = 1.05;
+          this.synth.speak(utter);
+        } catch (e) {}
+      }
+    }
+
+    const audio = new AudioEngine();
+
+    function cleanSpeechTitle(rawTitle) {
+      if (!rawTitle || typeof rawTitle !== 'string') return '前方道路';
+      let title = rawTitle.trim();
+      title = title.replace(/\([^)]*\)/g, '').replace(/（[^）]*）/g, '').replace(/\[[^\]]*\]/g, '');
+      title = title.replace(/(未安装|待建|拆除|调试|测试|待启用|已停用|来源[^\s,，。]+)/g, '');
+      title = title.replace(/(东往西|西往东|南往北|北往南|东北往西南|西南往东北|东南往西北|西北往东南)/g, '');
+      title = title.replace(/(东向西|西向东|南向北|北向南)/g, '');
+      title = title.replace(/(下桥位|上桥位|下桥处|上桥处|对出路段|对出|对面路段|对面|路段|辅道|主道|主线|匝道口?)/g, '');
+      title = title.replace(/交叉路口/g, '路口').replace(/路+路口/g, '路口').replace(/路+路/g, '路');
+      title = title.replace(/广园快速路立交/g, '广园立交').replace(/东风[东南西北中]路/g, '东风路').replace(/环市[东南西北中]路/g, '环市路');
+      title = title.replace(/^[\s,，、_-]+|[\s,，、_-]+$/g, '');
+      return title.length < 2 ? '前方道路' : title;
+    }
+
+    class HapticsEngine {
+      static vibrate(type = 'approach') {
+        if ('vibrate' in navigator) {
+          try {
+            if (type === 'approach') navigator.vibrate([70, 70, 110]);
+            else if (type === 'urgent') navigator.vibrate([120, 50, 120, 50, 160]);
+            else if (type === 'pass') navigator.vibrate(45);
+            else if (type === 'tap') navigator.vibrate(28);
+            else if (type === 'toggle') navigator.vibrate([35, 30, 35]);
+          } catch (e) {}
+        }
+        const el = document.getElementById('haptic-visual-border');
+        if (el) {
+          el.className = '';
+          void el.offsetWidth;
+          el.className = `haptic-${type}`;
+        }
+      }
+    }
+
+    /* ==========================================================================
+       8. iOS Safari 深度保活机制
+       ========================================================================== */
+    class iOSBackgroundKeeper {
+      constructor() {
+        this.audioEl = null;
+        this.isActive = false;
+      }
+
+      createSilentWavBlob(durationSec = 2, sampleRate = 8000) {
+        const numFrames = durationSec * sampleRate;
+        const bytesPerSample = 2;
+        const dataSize = numFrames * bytesPerSample;
+        const buffer = new ArrayBuffer(44 + dataSize);
+        const view = new DataView(buffer);
+        const writeStr = (offset, str) => { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); };
+        writeStr(0, 'RIFF');
+        view.setUint32(4, 36 + dataSize, true);
+        writeStr(8, 'WAVE');
+        writeStr(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        writeStr(36, 'data');
+        view.setUint32(40, dataSize, true);
+        return new Blob([buffer], { type: 'audio/wav' });
+      }
+
+      start() {
+        if (this.isActive) return;
+        this.isActive = true;
+        try {
+          if (!this.audioEl) {
+            this.audioEl = document.createElement('audio');
+            this.audioEl.setAttribute('playsinline', '');
+            this.audioEl.setAttribute('webkit-playsinline', '');
+            this.audioEl.setAttribute('loop', '');
+            this.audioEl.style.position = 'absolute';
+            this.audioEl.style.opacity = '0.001';
+            this.audioEl.src = URL.createObjectURL(this.createSilentWavBlob());
+            document.body.appendChild(this.audioEl);
+          }
+          this.audioEl.volume = 0.001;
+          this.audioEl.play().catch(() => {});
+          this.setupMediaSession();
+        } catch (e) {}
+      }
+
+      setupMediaSession() {
+        if (!('mediaSession' in navigator)) return;
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: '骑行巡航雷达 · 运行中',
+          artist: '广州 1,830 个监控点扫描中',
+          album: 'iOS 后台保活导航',
+          artwork: [{ src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' }]
+        });
+        navigator.mediaSession.playbackState = 'playing';
+      }
+
+      updateStatus(speedKmh, headingText, alertInfo) {
+        if (!('mediaSession' in navigator) || !navigator.mediaSession.metadata) return;
+        if (alertInfo) {
+          navigator.mediaSession.metadata.title = `⚠️ 前方${alertInfo.dist}m: ${alertInfo.title}`;
+          navigator.mediaSession.metadata.artist = `时速 ${speedKmh.toFixed(1)} km/h · 约 ${alertInfo.eta}秒后到达`;
+        } else {
+          navigator.mediaSession.metadata.title = `⚡ 时速: ${speedKmh.toFixed(1)} km/h · 道路通畅`;
+          navigator.mediaSession.metadata.artist = `航向: ${headingText} · 卫导保活中`;
+        }
+      }
+    }
+
+    const bgKeeper = new iOSBackgroundKeeper();
+
+    /* ==========================================================================
+       9. 东八区时间 (UTC+8) 自动日夜主题调度器
+       ========================================================================== */
+    const TimeThemeManager = {
+      // 获取东八区精准时间 (无论客户端设置什么时区，均准确定位 UTC+8 北京时间)
+      getBeijingDate: function() {
+        const now = new Date();
+        const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+        return new Date(utcMs + (8 * 3600000));
+      },
+
+      // 获取当前东八区对应主题: 06:30 ~ 18:30 为日间模式，其余为夜间模式
+      getAutoTheme: function() {
+        const bj = this.getBeijingDate();
+        const minutes = bj.getHours() * 60 + bj.getMinutes();
+        const isDaytime = (minutes >= 390 && minutes < 1110);
+        return {
+          theme: isDaytime ? 'sunlight' : 'night',
+          isDaytime: isDaytime,
+          timeStr: `${String(bj.getHours()).padStart(2, '0')}:${String(bj.getMinutes()).padStart(2, '0')}`
+        };
+      }
+    };
+
+    /* ==========================================================================
+       10. 核心巡航雷达主应用
+       ========================================================================== */
+    class RadarCruiseApp {
+      constructor() {
+        this.map = null;
+        this.clusterGroup = null;
+        this.markerInstances = [];
+        this.vehicleMarker = null;
+        this.radarSector = null; // 纯净静态前方探测扇面 (不晃眼)
+
+        // 算法组件
+        this.directionParser = new PointDirectionParser();
+        this.speedEngine = new SpeedAdaptiveWarningEngine();
+        this.headingEngine = new HeadingFilterAndLockEngine();
+
+        // 状态
+        this.currentPos = { lat: 23.1315, lng: 113.2750 };
+        this.heading = 270;
+        this.speedKmh = 29.0;
+        this.warningDistance = 120;
+        this.fovAngle = 40;
+        this.mode = 'sim';
+        this.distMode = 'auto';
+        this.mapFollow = true;
+
+        // 主题模式: 'auto' (东八区时间自动), 'sunlight' (手动日间), 'night' (手动夜间)
+        this.themeMode = 'auto';
+        this.currentTheme = 'night';
+
+        this.alertedMap = new Map();
+        this.activeTarget = null;
+        this.activeMarker = null;
+
+        // 模拟路线
+        this.simPath = [
+          [23.1314, 113.2980],
+          [23.1315, 113.2840],
+          [23.1306, 113.2713],
+          [23.1324, 113.2589],
+          [23.1330, 113.2450]
+        ];
+        this.simStep = 0;
+        this.simProgress = 0;
+        this.simTimer = null;
+        this.gpsWatchId = null;
+
+        this.initDOM();
+        this.initTheme();
+        this.initMap();
+        this.renderAllCameras();
+        this.startTimeWatcher();
+      }
+
+      initDOM() {
+        this.elSpeed = document.getElementById('inst-speed');
+        this.elHeading = document.getElementById('inst-heading');
+        this.elArrow = document.getElementById('inst-arrow');
+        this.elEta = document.getElementById('inst-eta');
+
+        this.elAlertCard = document.getElementById('alert-card');
+        this.elAlertTitle = document.getElementById('alert-title');
+        this.elAlertDesc = document.getElementById('alert-desc');
+        this.elAlertDist = document.getElementById('alert-distance');
+        this.elAlertProgress = document.getElementById('hud-progress');
+        this.elBadgeStatus = document.getElementById('badge-status');
+        this.elStatusText = document.getElementById('status-text');
+        this.elDistBox = document.getElementById('hud-dist-box');
+        this.elPeripheralFrame = document.getElementById('peripheral-alert-frame');
+
+        document.getElementById('btn-mode-sim').onclick = () => this.setMode('sim');
+        document.getElementById('btn-mode-gps').onclick = () => this.setMode('gps');
+        document.getElementById('btn-dist-toggle').onclick = () => this.cycleWarningDistance();
+        document.getElementById('btn-voice-toggle').onclick = () => this.toggleVoice();
+        document.getElementById('btn-recenter').onclick = () => this.recenter();
+        document.getElementById('btn-view-all').onclick = () => this.viewAllCameras();
+        document.getElementById('btn-theme-toggle').onclick = () => this.cycleThemeMode();
+
+        document.getElementById('btn-close-pwa-banner').onclick = () => {
+          document.getElementById('pwa-install-banner').style.display = 'none';
+        };
+      }
+
+      /* 初始化根据东八区自动设置主题 */
+      initTheme() {
+        const autoInfo = TimeThemeManager.getAutoTheme();
+        this.themeMode = 'auto';
+        this.applyTheme(autoInfo.theme, false);
+      }
+
+      /* 应用主题样式 */
+      applyTheme(theme, announce = false) {
+        this.currentTheme = theme;
+        document.body.className = `theme-${theme}`;
+
+        const iconSun = document.getElementById('icon-theme-sun');
+        const iconMoon = document.getElementById('icon-theme-moon');
+        const autoBadge = document.getElementById('theme-auto-badge');
+
+        if (iconSun && iconMoon) {
+          iconSun.style.display = (theme === 'sunlight') ? 'none' : 'block';
+          iconMoon.style.display = (theme === 'sunlight') ? 'block' : 'none';
+        }
+        if (autoBadge) {
+          autoBadge.style.display = (this.themeMode === 'auto') ? 'block' : 'none';
+        }
+
+        // 更新雷达扇面色泽
+        if (this.radarSector) {
+          const col = (theme === 'sunlight') ? '#0284c7' : '#00f2fe';
+          const fill = (theme === 'sunlight') ? 'rgba(2, 132, 199, 0.20)' : 'rgba(0, 242, 254, 0.16)';
+          this.radarSector.setStyle({ color: col, fillColor: fill });
+        }
+
+        if (announce) {
+          const bj = TimeThemeManager.getBeijingDate();
+          const timeStr = `${String(bj.getHours()).padStart(2, '0')}:${String(bj.getMinutes()).padStart(2, '0')}`;
+          if (this.themeMode === 'auto') {
+            audio.speak(`已开启东八区自动，北京时间${timeStr}，应用${theme === 'sunlight' ? '日间日光模式' : '夜间暗黑模式'}`);
+          } else {
+            audio.speak(theme === 'sunlight' ? '已手动设为日间日光模式' : '已手动设为夜间暗黑模式');
+          }
+        }
+      }
+
+      /* 循环切换主题模式: auto -> sunlight -> night -> auto */
+      cycleThemeMode() {
+        HapticsEngine.vibrate('toggle');
+        if (this.themeMode === 'auto') {
+          this.themeMode = 'sunlight';
+          this.applyTheme('sunlight', true);
+        } else if (this.themeMode === 'sunlight') {
+          this.themeMode = 'night';
+          this.applyTheme('night', true);
+        } else {
+          this.themeMode = 'auto';
+          const autoInfo = TimeThemeManager.getAutoTheme();
+          this.applyTheme(autoInfo.theme, true);
+        }
+      }
+
+      /* 每 30 秒检查一次东八区时间，自动跨越日出/日落时切换 */
+      startTimeWatcher() {
+        setInterval(() => {
+          if (this.themeMode === 'auto') {
+            const autoInfo = TimeThemeManager.getAutoTheme();
+            if (autoInfo.theme !== this.currentTheme) {
+              this.applyTheme(autoInfo.theme, true);
+            }
+          }
+        }, 30000);
+      }
+
+      initMap() {
+        this.map = L.map('map', { zoomControl: false, attributionControl: false }).setView([this.currentPos.lat, this.currentPos.lng], 16);
+
+        // 高德矢量街道瓦片
+        L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+          subdomains: ['1', '2', '3', '4'],
+          maxZoom: 19
+        }).addTo(this.map);
+
+        this.clusterGroup = L.markerClusterGroup({
+          chunkedLoading: true,
+          maxClusterRadius: 45,
+          spiderfyOnMaxZoom: true,
+          showCoverageOnHover: false,
+          disableClusteringAtZoom: 17
+        });
+        this.map.addLayer(this.clusterGroup);
+
+        // 车头标记
+        const vehicleHtml = `<div class="vehicle-core" id="car-core"><div class="vehicle-pointer"></div></div>`;
+        this.vehicleMarker = L.marker([this.currentPos.lat, this.currentPos.lng], {
+          icon: L.divIcon({ html: vehicleHtml, className: 'custom-vehicle-icon', iconSize: [32, 32], iconAnchor: [16, 16] }),
+          zIndexOffset: 2000
+        }).addTo(this.map);
+
+        // 静态纯净前方雷达扇面 (安定不晃眼)
+        const isSun = (this.currentTheme === 'sunlight');
+        this.radarSector = L.polygon([], {
+          color: isSun ? '#0284c7' : '#00f2fe',
+          weight: 1.8,
+          fillColor: isSun ? 'rgba(2, 132, 199, 0.20)' : 'rgba(0, 242, 254, 0.16)',
+          fillOpacity: 1,
+          className: 'leaflet-radar-cone'
+        }).addTo(this.map);
+
+        this.updateRadarSector();
+
+        window.addEventListener('resize', () => {
+          setTimeout(() => { if (this.map) this.map.invalidateSize(); }, 200);
+        });
+      }
+
+      renderAllCameras() {
+        const camSvg = `
+          <div class="camera-marker-pin">
+            <svg viewBox="0 0 24 24"><path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg>
+          </div>
+        `;
+        const camIcon = L.divIcon({ className: 'custom-cam-icon', html: camSvg, iconSize: [28, 28], iconAnchor: [14, 28], popupAnchor: [0, -28] });
+
+        const markers = [];
+        this.markerInstances = [];
+
+        ALL_POINTS.forEach((pt, idx) => {
+          const m = L.marker([pt[0], pt[1]], { icon: camIcon });
+          m.bindPopup(`
+            <div style="font-weight:700;font-size:14px;color:#38bdf8;margin-bottom:4px;">📹 监控抓拍点</div>
+            <div style="font-size:12px;color:#cbd5e1;line-height:1.5;">
+              <strong>名称:</strong> ${pt[2]}<br>
+              <strong>受控方向:</strong> ${this.directionParser.parsePointDirection(pt[2]).directionText}<br>
+              <strong>坐标:</strong> ${pt[0].toFixed(5)}, ${pt[1].toFixed(5)}
+            </div>
+          `);
+          m.pointIndex = idx;
+          markers.push(m);
+          this.markerInstances.push(m);
+        });
+
+        this.clusterGroup.addLayers(markers);
+      }
+
+      viewAllCameras() {
+        this.mapFollow = false;
+        this.map.fitBounds(this.clusterGroup.getBounds(), { padding: [40, 40] });
+        audio.speak('已展开全广州摄像头分布');
+      }
+
+      /* 更新静态稳定雷达扇面 (跟随车头朝向平滑旋转，不再左右摇摆) */
+      updateRadarSector() {
+        const center = [this.currentPos.lat, this.currentPos.lng];
+        const dist = this.warningDistance;
+        const head = this.heading;
+        const fov = this.fovAngle;
+        const points = [center];
+        const steps = 14;
+
+        for (let i = 0; i <= steps; i++) {
+          const deg = (head - fov + (fov * 2 * i / steps) + 360) % 360;
+          points.push(MathUtils.calculateDestinationPoint(center[0], center[1], dist, deg));
+        }
+        points.push(center);
+        this.radarSector.setLatLngs(points);
+
+        const core = document.getElementById('car-core');
+        if (core) core.style.transform = `rotate(${this.heading}deg)`;
+      }
+
+      /* 核心：航向预测、对向车道过滤与接近评估 */
+      evaluateNearbyTargets() {
+        let candidate = null;
+        let candidateMarker = null;
+        let minDistance = Infinity;
+        const now = Date.now();
+
+        if (this.distMode === 'auto') {
+          this.warningDistance = this.speedEngine.update(this.speedKmh);
+          document.getElementById('hud-sub-status').innerText = `自适应预警: ${this.warningDistance}米`;
+        }
+
+        for (let i = 0; i < ALL_POINTS.length; i++) {
+          const p = ALL_POINTS[i];
+          if (Math.abs(p[0] - this.currentPos.lat) > 0.012 || Math.abs(p[1] - this.currentPos.lng) > 0.012) continue;
+
+          const dist = MathUtils.getDistance(this.currentPos.lat, this.currentPos.lng, p[0], p[1]);
+          if (dist > this.warningDistance) continue;
+
+          const bearingToPoint = MathUtils.getBearing(this.currentPos.lat, this.currentPos.lng, p[0], p[1]);
+          const angleOffset = MathUtils.getAngleDiff(this.heading, bearingToPoint);
+          if (angleOffset > this.fovAngle) continue;
+
+          // 核心方向匹配: 对向车道反向静音过滤！
+          const dirInfo = this.directionParser.parsePointDirection(p[2]);
+          const matchResult = this.directionParser.evaluateRiderHeading(this.heading, dirInfo);
+          if (!matchResult.shouldAlert) continue;
+
+          if (dist < minDistance) {
+            minDistance = dist;
+            candidate = {
+              index: i,
+              lat: p[0],
+              lng: p[1],
+              title: p[2],
+              cleanTitle: cleanSpeechTitle(p[2]),
+              dist: Math.round(dist),
+              angleOffset: Math.round(angleOffset)
+            };
+            candidateMarker = this.markerInstances[i];
+          }
+        }
+
+        if (candidate) {
+          if (this.activeMarker && this.activeMarker !== candidateMarker) {
+            const el = this.activeMarker.getElement();
+            if (el) {
+              const pin = el.querySelector('.camera-marker-pin');
+              if (pin) pin.classList.remove('alerting');
+            }
+          }
+
+          this.activeTarget = candidate;
+          this.activeMarker = candidateMarker;
+
+          if (candidateMarker) {
+            const el = candidateMarker.getElement();
+            if (el) {
+              const pin = el.querySelector('.camera-marker-pin');
+              if (pin) pin.classList.add('alerting');
+            }
+          }
+
+          const speedMs = Math.max((this.speedKmh * 1000 / 3600), 2.0);
+          const etaSec = Math.round(candidate.dist / speedMs);
+
+          this.updateAlertHUD(candidate, etaSec);
+          bgKeeper.updateStatus(this.speedKmh, headingToText(this.heading), { dist: candidate.dist, title: candidate.cleanTitle, eta: etaSec });
+
+          const lastAlert = this.alertedMap.get(candidate.index);
+          if (!lastAlert || (now - lastAlert) > 30000) {
+            this.alertedMap.set(candidate.index, now);
+            audio.playApproachChime();
+            HapticsEngine.vibrate(candidate.dist <= 50 ? 'urgent' : 'approach');
+            audio.speak(`注意，前方${candidate.dist}米，${candidate.cleanTitle}`);
+          }
+        } else {
+          if (this.activeMarker) {
+            const el = this.activeMarker.getElement();
+            if (el) {
+              const pin = el.querySelector('.camera-marker-pin');
+              if (pin) pin.classList.remove('alerting');
+            }
+            this.activeMarker = null;
+          }
+
+          if (this.activeTarget) {
+            audio.playPassConfirmSound();
+            HapticsEngine.vibrate('pass');
+            this.activeTarget = null;
+          }
+          this.resetAlertHUD();
+          bgKeeper.updateStatus(this.speedKmh, headingToText(this.heading), null);
+        }
+      }
+
+      updateAlertHUD(target, etaSec) {
+        this.elAlertTitle.innerText = target.cleanTitle;
+        this.elAlertDesc.innerText = `前方同向路线 · 预计 ${etaSec} 秒后到达`;
+        this.elAlertDist.innerText = target.dist;
+        this.elEta.innerText = etaSec;
+
+        const pct = Math.max(0, Math.min(100, (1 - target.dist / this.warningDistance) * 100));
+        this.elAlertProgress.style.width = `${pct}%`;
+
+        if (target.dist <= 50) {
+          this.elAlertCard.className = 'alert-card status-danger';
+          this.elBadgeStatus.className = 'badge-status danger';
+          this.elStatusText.innerText = '即将通过 · 极近高危';
+          this.elDistBox.className = 'hud-dist-box danger';
+          this.elPeripheralFrame.className = 'peripheral-alert-frame danger';
+          this.radarSector.setStyle({ color: '#ef4444', fillColor: 'rgba(239, 68, 68, 0.28)' });
+        } else {
+          this.elAlertCard.className = 'alert-card status-warning';
+          this.elBadgeStatus.className = 'badge-status warning';
+          this.elStatusText.innerText = '前方接近监控';
+          this.elDistBox.className = 'hud-dist-box warning';
+          this.elPeripheralFrame.className = 'peripheral-alert-frame warning';
+          this.radarSector.setStyle({ color: '#f59e0b', fillColor: 'rgba(245, 158, 11, 0.25)' });
+        }
+      }
+
+      resetAlertHUD() {
+        this.elAlertCard.className = 'alert-card status-safe';
+        this.elBadgeStatus.className = 'badge-status';
+        this.elStatusText.innerText = '巡航雷达运行中';
+        this.elDistBox.className = 'hud-dist-box';
+        this.elAlertTitle.innerText = '前方道路通畅';
+        this.elAlertDesc.innerText = `航向 ${headingToText(this.heading)} · 雷达守护中`;
+        this.elAlertDist.innerText = '--';
+        this.elEta.innerText = '--';
+        this.elAlertProgress.style.width = '0%';
+        this.elPeripheralFrame.className = 'peripheral-alert-frame';
+
+        const isSun = (this.currentTheme === 'sunlight');
+        const col = isSun ? '#0284c7' : '#00f2fe';
+        const fill = isSun ? 'rgba(2, 132, 199, 0.20)' : 'rgba(0, 242, 254, 0.16)';
+        this.radarSector.setStyle({ color: col, fillColor: fill });
+      }
+
+      updateCockpit() {
+        this.elSpeed.innerText = this.speedKmh.toFixed(1);
+        this.elHeading.innerText = headingToText(this.heading);
+        this.elArrow.style.transform = `rotate(${this.heading}deg)`;
+      }
+
+      startSimulation() {
+        this.stopSimulation();
+        this.simStep = 0;
+        this.simProgress = 0;
+        this.speedKmh = 29.5;
+
+        const tickInterval = 200;
+        const speedMs = this.speedKmh * 1000 / 3600;
+        const distPerTick = speedMs * (tickInterval / 1000);
+
+        this.simTimer = setInterval(() => {
+          if (this.simStep >= this.simPath.length - 1) {
+            this.simStep = 0;
+            this.simProgress = 0;
+          }
+
+          const p1 = this.simPath[this.simStep];
+          const p2 = this.simPath[this.simStep + 1];
+
+          const legDistance = MathUtils.getDistance(p1[0], p1[1], p2[0], p2[1]);
+          const targetHeading = MathUtils.getBearing(p1[0], p1[1], p2[0], p2[1]);
+          this.heading = this.headingEngine.update(targetHeading, this.speedKmh);
+
+          this.simProgress += distPerTick / legDistance;
+          if (this.simProgress >= 1.0) {
+            this.simProgress = 0;
+            this.simStep++;
+          }
+
+          const curLat = p1[0] + (p2[0] - p1[0]) * this.simProgress;
+          const curLng = p1[1] + (p2[1] - p1[1]) * this.simProgress;
+
+          this.currentPos = { lat: curLat, lng: curLng };
+          this.vehicleMarker.setLatLng([curLat, curLng]);
+          this.updateRadarSector();
+          this.updateCockpit();
+          this.evaluateNearbyTargets();
+
+          if (this.mapFollow) this.map.panTo([curLat, curLng], { animate: false });
+        }, tickInterval);
+      }
+
+      stopSimulation() {
+        if (this.simTimer) {
+          clearInterval(this.simTimer);
+          this.simTimer = null;
+        }
+      }
+
+      startGPS() {
+        this.stopGPS();
+        if (!('geolocation' in navigator)) {
+          alert('当前浏览器不支持 GPS 定位');
+          return;
+        }
+
+        let lastGpsPoint = null;
+
+        this.gpsWatchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            const wgsLat = pos.coords.latitude;
+            const wgsLng = pos.coords.longitude;
+            const [gcjLng, gcjLat] = CoordTransform.wgs84ToGcj02(wgsLng, wgsLat);
+
+            if (pos.coords.speed !== null && pos.coords.speed >= 0) {
+              this.speedKmh = pos.coords.speed * 3.6;
+            }
+
+            let rawH = pos.coords.heading;
+            if (rawH === null || isNaN(rawH)) {
+              if (lastGpsPoint) {
+                const moveDist = MathUtils.getDistance(lastGpsPoint.lat, lastGpsPoint.lng, gcjLat, gcjLng);
+                if (moveDist >= 2.0) {
+                  rawH = MathUtils.getBearing(lastGpsPoint.lat, lastGpsPoint.lng, gcjLat, gcjLng);
+                }
+              }
+            }
+
+            this.heading = this.headingEngine.update(rawH, this.speedKmh);
+            lastGpsPoint = { lat: gcjLat, lng: gcjLng };
+            this.currentPos = { lat: gcjLat, lng: gcjLng };
+
+            this.vehicleMarker.setLatLng([gcjLat, gcjLng]);
+            this.updateRadarSector();
+            this.updateCockpit();
+            this.evaluateNearbyTargets();
+
+            if (this.mapFollow) this.map.panTo([gcjLat, gcjLng], { animate: true });
+          },
+          (err) => console.warn('GPS Error:', err.message),
+          { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+        );
+      }
+
+      stopGPS() {
+        if (this.gpsWatchId !== null) {
+          navigator.geolocation.clearWatch(this.gpsWatchId);
+          this.gpsWatchId = null;
+        }
+      }
+
+      setMode(mode) {
+        this.mode = mode;
+        const btnSim = document.getElementById('btn-mode-sim');
+        const btnGps = document.getElementById('btn-mode-gps');
+        if (mode === 'sim') {
+          btnSim.classList.add('active');
+          btnGps.classList.remove('active');
+          this.stopGPS();
+          this.startSimulation();
+          audio.speak('已开启模拟骑行演练');
+        } else {
+          btnGps.classList.add('active');
+          btnSim.classList.remove('active');
+          this.stopSimulation();
+          this.startGPS();
+          audio.speak('已启动真机GPS高精巡航');
+        }
+      }
+
+      cycleWarningDistance() {
+        HapticsEngine.vibrate('toggle');
+        const modes = ['auto', 80, 120, 160];
+        let idx = modes.indexOf(this.distMode);
+        this.distMode = modes[(idx + 1) % modes.length];
+
+        const lbl = document.getElementById('lbl-dist-mode');
+        if (this.distMode === 'auto') {
+          lbl.innerText = '自适应';
+          document.getElementById('hud-sub-status').innerText = '车速自适应预警';
+          audio.speak('已切换为车速自适应预警模式');
+        } else {
+          this.warningDistance = this.distMode;
+          lbl.innerText = `${this.distMode}米`;
+          document.getElementById('hud-sub-status').innerText = `预警距离: ${this.distMode}米`;
+          audio.speak(`预警距离已设为${this.distMode}米`);
+        }
+        this.updateRadarSector();
+      }
+
+      toggleVoice() {
+        HapticsEngine.vibrate('toggle');
+        audio.enabled = !audio.enabled;
+        const btn = document.getElementById('btn-voice-toggle');
+        const lbl = document.getElementById('lbl-voice');
+        if (audio.enabled) {
+          btn.classList.add('active');
+          lbl.innerText = '语音开';
+          audio.speak('语音播报已开启');
+        } else {
+          btn.classList.remove('active');
+          lbl.innerText = '静音';
+        }
+      }
+
+      recenter() {
+        HapticsEngine.vibrate('tap');
+        this.mapFollow = true;
+        this.map.setView([this.currentPos.lat, this.currentPos.lng], 16, { animate: true });
+      }
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+
+    async function requestWakeLock() {
+      if ('wakeLock' in navigator) {
+        try { await navigator.wakeLock.request('screen'); } catch (e) {}
+      }
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') requestWakeLock();
+    });
+
+    let app = null;
+    document.getElementById('btn-start-experience').addEventListener('click', () => {
+      audio.init();
+      audio.playApproachChime();
+      audio.speak('骑行巡航雷达已启动，祝您骑行平安');
+
+      bgKeeper.start();
+      requestWakeLock();
+
+      document.getElementById('start-overlay').style.display = 'none';
+
+      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+      if (isIos && !isStandalone) {
+        setTimeout(() => { document.getElementById('pwa-install-banner').style.display = 'flex'; }, 3000);
+      }
+
+      app = new RadarCruiseApp();
+      app.startSimulation();
+    });
+  </script>
+</body>
+</html>
