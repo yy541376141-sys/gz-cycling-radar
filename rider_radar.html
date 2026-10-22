@@ -198,7 +198,7 @@
       100% { box-shadow: inset 0 0 0 transparent; }
     }
 
-    /* ================= 3. 顶部 HUD 独立容器 (适配 iPhone 16 灵动岛防遮挡) ================= */
+    /* ================= 3. 顶部 HUD 独立容器 (防 iPhone 16 灵动岛遮挡) ================= */
     .top-hud {
       position: absolute;
       top: 0;
@@ -209,7 +209,6 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      /* iPhone 16 灵动岛下边界高度约 54px，硬性留出充足间距 */
       padding-top: max(56px, calc(env(safe-area-inset-top, 20px) + 14px));
       padding-left: 14px;
       padding-right: 14px;
@@ -380,7 +379,6 @@
     }
     .speed-unit { font-size: 11px; color: var(--text-accent); font-weight: 700; margin-top: 2px; }
 
-    /* 车头方向指示器: 极速直接渲染，无迟滞 */
     .heading-arrow {
       font-size: 26px;
       color: var(--text-accent);
@@ -392,7 +390,7 @@
     .target-count { font-size: 26px; font-weight: 800; line-height: 1; color: var(--text-main); }
     .inst-divider { width: 1px; height: 34px; background: var(--border-subtle); }
 
-    /* 精简 3 键式底部大触控区 (删除模拟骑行，按键更宽更大易按) */
+    /* 精简 3 键大触控区 */
     .controls-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -467,14 +465,12 @@
       line-height: 1;
     }
 
-    /* 静态纯净前方雷达扇区 (不晃眼) */
     .leaflet-radar-cone {
       pointer-events: none;
       transition: stroke 0.25s ease, fill 0.25s ease;
       stroke-dasharray: 4, 4;
     }
 
-    /* 摄像头图钉 */
     .camera-marker-pin {
       width: 28px;
       height: 28px;
@@ -504,7 +500,6 @@
       50% { transform: rotate(-45deg) scale(1.35); }
     }
 
-    /* 聚合簇样式 */
     .marker-cluster-small { background-color: rgba(2, 132, 199, 0.6) !important; }
     .marker-cluster-small div { background-color: rgba(2, 132, 199, 0.9) !important; color: #fff !important; font-weight: 700 !important; }
     .marker-cluster-medium { background-color: rgba(14, 165, 233, 0.6) !important; }
@@ -512,7 +507,6 @@
     .marker-cluster-large { background-color: rgba(37, 99, 235, 0.6) !important; }
     .marker-cluster-large div { background-color: rgba(37, 99, 235, 0.9) !important; color: #fff !important; font-weight: 700 !important; }
 
-    /* 动态旋转车头标: 0.05s 极速线性响应，绝无慢半拍 */
     .vehicle-core {
       width: 32px;
       height: 32px;
@@ -533,54 +527,6 @@
       border-bottom: 13px solid #041226;
       transform: translateY(-2px);
     }
-
-    /* 启动手势遮罩 */
-    #start-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 10000;
-      background: rgba(8, 12, 22, 0.96);
-      backdrop-filter: blur(25px);
-      -webkit-backdrop-filter: blur(25px);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      text-align: center;
-    }
-    .start-box {
-      max-width: 360px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-    }
-    .start-icon {
-      width: 76px;
-      height: 76px;
-      border-radius: 22px;
-      background: linear-gradient(135deg, #00f2fe, #0099ff);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #0b0f19;
-      box-shadow: 0 10px 25px rgba(0, 242, 254, 0.4);
-    }
-    .btn-start-main {
-      width: 100%;
-      background: linear-gradient(135deg, #00f2fe, #0099ff);
-      color: #041226;
-      border: none;
-      padding: 16px;
-      border-radius: 16px;
-      font-size: 16px;
-      font-weight: 800;
-      cursor: pointer;
-      box-shadow: 0 8px 24px rgba(0, 242, 254, 0.35);
-      margin-top: 6px;
-    }
-    .btn-start-main:active { transform: scale(0.97); }
 
     #pwa-install-banner {
       display: none;
@@ -619,7 +565,7 @@
   <div class="peripheral-alert-frame" id="peripheral-alert-frame"></div>
   <div id="haptic-visual-border"></div>
 
-  <!-- 地图容器 -->
+  <!-- 地图容器 (进站即展示) -->
   <div id="map"></div>
 
   <!-- 浮动右侧快捷工具 -->
@@ -663,7 +609,7 @@
     </div>
   </div>
 
-  <!-- 底部驾驶舱仪表 (独立严谨固定在屏幕底部安全区) -->
+  <!-- 底部驾驶舱仪表 (独立固定底端) -->
   <div class="bottom-cockpit">
     <div class="cockpit-panel">
       <div class="instruments-row">
@@ -686,7 +632,6 @@
         </div>
       </div>
 
-      <!-- 精简 3 键大触控区 (已删除模拟骑行) -->
       <div class="controls-grid">
         <button class="btn-act active" id="btn-recenter-main">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg>
@@ -711,22 +656,6 @@
       轻点下方分享按钮 ⎋，选择<strong>「添加到主屏幕 ⊞」</strong>获得沉浸式车机与后台保活！
     </div>
     <button class="close-btn" id="btn-close-pwa-banner">✕</button>
-  </div>
-
-  <!-- iOS 首次交互遮罩 -->
-  <div id="start-overlay">
-    <div class="start-box">
-      <div class="start-icon">
-        <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-      </div>
-      <h2 style="font-size:22px;font-weight:900;">骑行巡航雷达</h2>
-      <p style="font-size:13.5px;color:#94a3b8;line-height:1.6;">
-        专为 iPhone 骑行支架设计<br>
-        前进方向指引 · 罗盘极速响应 · 自适应视野跟随<br>
-        <span style="color:#00f2fe;font-weight:700;">已载入 1,830 个广州道路监控点位</span>
-      </p>
-      <button class="btn-start-main" id="btn-start-experience">立即启程 · 开启巡航</button>
-    </div>
   </div>
 
   <!-- Leaflet & MarkerCluster JS -->
@@ -917,9 +846,6 @@
       }
     }
 
-    /* ==========================================================================
-       6. 极速响应车辆前进方向追踪器 (陀螺仪零延迟跟手，运动时严格指向前进方向)
-       ========================================================================== */
     class VehicleMotionHeadingTracker {
       constructor() {
         this.currentHeading = 0;
@@ -929,18 +855,15 @@
         this.currentSpeedKmh = 0;
       }
 
-      // 电子罗盘实时事件: 零延迟直接生效，转把即动！
       updateCompass(compassDeg) {
         if (compassDeg === null || isNaN(compassDeg)) return;
         this.compassHeading = (compassDeg % 360 + 360) % 360;
 
-        // 当静止或极低速 (< 4 km/h)，直接使用电子罗盘朝向，绝不迟钝！
         if (this.currentSpeedKmh < 4.0) {
           this.currentHeading = this.compassHeading;
         }
       }
 
-      // GPS 定位事件
       updateGPS(lat, lng, speedKmh) {
         if (speedKmh !== null && !isNaN(speedKmh) && speedKmh >= 0) {
           this.currentSpeedKmh = speedKmh;
@@ -955,13 +878,11 @@
 
         const displacement = MathUtils.getDistance(this.anchorGpsPoint.lat, this.anchorGpsPoint.lng, lat, lng);
 
-        // 当产生大于 2.2 米的位移时，计算真实前进航向
         if (displacement >= 2.2) {
           this.motionHeading = MathUtils.getBearing(this.anchorGpsPoint.lat, this.anchorGpsPoint.lng, lat, lng);
           this.anchorGpsPoint = curPoint;
         }
 
-        // 前进过程中 (速度 >= 4 km/h 且有前进航向) 严格指向前进方向！
         if (this.currentSpeedKmh >= 4.0 && this.motionHeading !== null) {
           this.currentHeading = this.motionHeading;
         } else if (this.currentSpeedKmh < 4.0 && this.compassHeading !== null) {
@@ -1229,7 +1150,7 @@
     };
 
     /* ==========================================================================
-       10. 核心巡航雷达主应用 (纯净真机 GPS，前瞻偏置与速度自适应缩放)
+       10. 核心巡航雷达主应用 (无首页，进站即用车载车机)
        ========================================================================== */
     class RadarCruiseApp {
       constructor() {
@@ -1254,8 +1175,7 @@
         this.themeMode = 'auto';
         this.currentTheme = 'night';
 
-        this.currentZoom = 17.5; // 当前缩放等级
-        this.lastZoomUpdateSpeed = 0;
+        this.currentZoom = 17.5;
 
         this.alertedMap = new Map();
         this.activeTarget = null;
@@ -1437,10 +1357,8 @@
         audio.speak('已展开全广州摄像头分布');
       }
 
-      // 电子罗盘事件快速更新
       onCompassUpdate(compassHeading) {
         this.motionTracker.updateCompass(compassHeading);
-        // 静止或低速下，指针秒级直出
         if (this.speedKmh < 4.0) {
           this.heading = this.motionTracker.currentHeading;
           this.updateRadarSector();
@@ -1448,22 +1366,18 @@
         }
       }
 
-      // 速度自适应智能缩放 & 前方视野偏置定位 (Look-Ahead Camera View)
       updateCameraAndZoom() {
         if (!this.mapFollow) return;
 
-        // 1. 速度自适应缩放等级
         let targetZoom = 17.5;
         if (this.speedKmh < 5.0) {
-          targetZoom = 18.0; // 静止/起步放大，超清看清路口
+          targetZoom = 18.0;
         } else if (this.speedKmh <= 25.0) {
-          targetZoom = 17.5; // 20~25 km/h 骑行
+          targetZoom = 17.5;
         } else {
-          targetZoom = 17.0; // 快速骑行，看更远前方
+          targetZoom = 17.0;
         }
 
-        // 2. 车头前方偏置视距 (Look-Ahead): 将地图中心向车头前方延伸 70 米
-        // 这样当前车标位于屏幕中下方，前方 75% 宽广视野留给即将到达的监控点！
         const lookAheadDist = (this.speedKmh >= 4.0) ? 75.0 : 25.0;
         const targetCenter = MathUtils.calculateDestinationPoint(
           this.currentPos.lat,
@@ -1521,7 +1435,6 @@
           const angleOffset = MathUtils.getAngleDiff(this.heading, bearingToPoint);
           if (angleOffset > this.fovAngle) continue;
 
-          // 对向车道静音过滤
           const dirInfo = this.directionParser.parsePointDirection(p[2]);
           const matchResult = this.directionParser.evaluateRiderHeading(this.heading, dirInfo);
           if (!matchResult.shouldAlert) continue;
@@ -1666,7 +1579,6 @@
             }
             this.speedKmh = spdKmh;
 
-            // 车辆前进方向多源融合算法：前进时坚决指向前进航向！
             this.heading = this.motionTracker.updateGPS(gcjLat, gcjLng, spdKmh);
 
             this.currentPos = { lat: gcjLat, lng: gcjLng };
@@ -1674,9 +1586,12 @@
             this.updateRadarSector();
             this.updateCockpit();
             this.evaluateNearbyTargets();
-            this.updateCameraAndZoom(); // 动态速度缩放与前方视野偏置
+            this.updateCameraAndZoom();
           },
-          (err) => console.warn('GPS Error:', err.message),
+          (err) => {
+            console.warn('GPS Error:', err.message);
+            this.elStatusText.innerText = '等待 GPS 定位授权...';
+          },
           { enableHighAccuracy: true, maximumAge: 800, timeout: 10000 }
         );
       }
@@ -1746,16 +1661,19 @@
     });
 
     let app = null;
+    let sensorsActivated = false;
 
-    document.getElementById('btn-start-experience').addEventListener('click', () => {
+    // 核心：无感手势激活器 (进入网站后只要用户触摸屏幕任意位置即自动完成罗盘与语音解锁)
+    function activateSensorsOnce() {
+      if (sensorsActivated) return;
+      sensorsActivated = true;
+
       audio.init();
       audio.playApproachChime();
-      audio.speak('高精巡航雷达已启动，祝您骑行平安');
-
       bgKeeper.start();
       requestWakeLock();
 
-      // 请求 iOS 专属罗盘权限
+      // 请求 iOS 罗盘权限
       if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
           .then(res => {
@@ -1763,22 +1681,11 @@
               window.addEventListener('deviceorientation', handleOrientationEvent, true);
             }
           })
-          .catch(err => console.warn('Compass permission rejected:', err));
+          .catch(console.warn);
       } else {
         window.addEventListener('deviceorientation', handleOrientationEvent, true);
       }
-
-      document.getElementById('start-overlay').style.display = 'none';
-
-      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-      if (isIos && !isStandalone) {
-        setTimeout(() => { document.getElementById('pwa-install-banner').style.display = 'flex'; }, 3000);
-      }
-
-      app = new RadarCruiseApp();
-      app.startGPS();
-    });
+    }
 
     // 罗盘事件极速直达
     function handleOrientationEvent(e) {
@@ -1793,6 +1700,22 @@
         app.onCompassUpdate(heading);
       }
     }
+
+    // 页面加载完成后立即自动进入车机巡航，零首页无遮挡！
+    window.addEventListener('DOMContentLoaded', () => {
+      app = new RadarCruiseApp();
+      app.startGPS(); // 立即触发浏览器系统定位授权
+
+      // 绑定一次性手势触摸激活罗盘与音频 (任意滑动地图或点击按钮即生效)
+      document.addEventListener('click', activateSensorsOnce, { once: true });
+      document.addEventListener('touchend', activateSensorsOnce, { once: true });
+
+      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+      if (isIos && !isStandalone) {
+        setTimeout(() => { document.getElementById('pwa-install-banner').style.display = 'flex'; }, 3000);
+      }
+    });
   </script>
 </body>
 </html>
