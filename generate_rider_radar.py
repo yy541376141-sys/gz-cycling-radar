@@ -82,8 +82,7 @@ html_template = '''<!DOCTYPE html>
       z-index: 1;
     }
 
-    /* ================= 1. 双主题配色系统 (日间模式 vs 夜间模式) ================= */
-    /* 夜间暗黑模式 (18:30 ~ 次日 06:30 自动开启) */
+    /* ================= 1. 双主题配色系统 ================= */
     body.theme-night {
       --bg-dark: #080c16;
       --card-bg: rgba(13, 20, 36, 0.90);
@@ -112,23 +111,22 @@ html_template = '''<!DOCTYPE html>
       --tile-filter: invert(100%) hue-rotate(180deg) brightness(88%) contrast(92%) saturate(120%);
     }
 
-    /* 日光日间模式 (06:30 ~ 18:30 自动开启，高反差抗反光) */
     body.theme-sunlight {
       --bg-dark: #f8fafc;
       --card-bg: #ffffff;
       --card-blur: none;
-      --card-border: 2.5px solid #000000;
-      --card-shadow: 0 8px 0 #000000, 0 12px 28px rgba(0, 0, 0, 0.22);
+      --card-border: 2px solid #000000;
+      --card-shadow: 0 6px 0 #000000, 0 10px 25px rgba(0, 0, 0, 0.18);
       --text-main: #000000;
-      --text-sub: #1e293b;
+      --text-sub: #334155;
       --text-value: #000000;
       --text-accent: #0284c7;
       --border-subtle: rgba(0, 0, 0, 0.22);
       --btn-bg: #f8fafc;
-      --btn-border: 2px solid #000000;
+      --btn-border: 1.8px solid #000000;
       --btn-text: #000000;
       --btn-active-bg: #000000;
-      --btn-active-border: 2px solid #000000;
+      --btn-active-border: 1.8px solid #000000;
       --btn-active-text: #ffffff;
       --radar-color: #0284c7;
       --radar-fill: rgba(2, 132, 199, 0.20);
@@ -191,7 +189,6 @@ html_template = '''<!DOCTYPE html>
       50% { box-shadow: inset 0 0 100px rgba(239, 68, 68, 1); filter: brightness(1.25); }
     }
 
-    /* 拟触觉高光光效 */
     #haptic-visual-border {
       position: fixed;
       inset: 0;
@@ -217,7 +214,7 @@ html_template = '''<!DOCTYPE html>
       100% { box-shadow: inset 0 0 0 transparent; }
     }
 
-    /* ================= 3. 顶部 HUD 卡片 ================= */
+    /* ================= 3. 顶部 HUD 独立容器 (只放预警信息，严禁套入底部仪表) ================= */
     .top-hud {
       position: absolute;
       top: 0;
@@ -235,18 +232,18 @@ html_template = '''<!DOCTYPE html>
       pointer-events: auto;
       width: 100%;
       max-width: 440px;
-      margin-top: 4px;
+      margin-top: 2px;
       background: var(--card-bg);
       backdrop-filter: var(--card-blur);
       -webkit-backdrop-filter: var(--card-blur);
       border: var(--card-border);
-      border-radius: 20px;
-      padding: 13px 18px;
+      border-radius: 18px;
+      padding: 12px 16px;
       box-shadow: var(--card-shadow);
       transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
     }
 
     .alert-card.status-safe {
@@ -298,7 +295,7 @@ html_template = '''<!DOCTYPE html>
     .hud-main { display: flex; justify-content: space-between; align-items: center; }
     .hud-title-box { flex: 1; padding-right: 12px; overflow: hidden; }
     .hud-point-title {
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 800;
       color: var(--text-main);
       white-space: nowrap;
@@ -306,11 +303,11 @@ html_template = '''<!DOCTYPE html>
       text-overflow: ellipsis;
       letter-spacing: -0.3px;
     }
-    .hud-point-sub { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+    .hud-point-sub { font-size: 11.5px; color: var(--text-sub); margin-top: 2px; }
 
-    .hud-dist-box { text-align: right; min-width: 80px; }
+    .hud-dist-box { text-align: right; min-width: 75px; }
     .hud-dist-value {
-      font-size: 28px;
+      font-size: 26px;
       font-weight: 900;
       line-height: 1;
       font-feature-settings: "tnum";
@@ -340,7 +337,7 @@ html_template = '''<!DOCTYPE html>
     .warning .hud-progress-bar { background: var(--accent-amber); }
     .danger .hud-progress-bar { background: var(--accent-red); }
 
-    /* ================= 4. 底部驾驶舱仪表盘与大触控区 ================= */
+    /* ================= 4. 底部驾驶舱独立容器 (严谨定位在屏幕底端) ================= */
     .bottom-cockpit {
       position: absolute;
       bottom: 0;
@@ -362,10 +359,10 @@ html_template = '''<!DOCTYPE html>
       backdrop-filter: var(--card-blur);
       -webkit-backdrop-filter: var(--card-blur);
       border: var(--card-border);
-      border-radius: 24px;
-      padding: 14px 18px;
+      border-radius: 22px;
+      padding: 12px 16px;
       box-shadow: var(--card-shadow);
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       transition: all 0.3s ease;
     }
 
@@ -373,7 +370,7 @@ html_template = '''<!DOCTYPE html>
       display: flex;
       align-items: center;
       justify-content: space-around;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
 
     .inst-item {
@@ -384,9 +381,9 @@ html_template = '''<!DOCTYPE html>
       flex: 1;
     }
 
-    .inst-label { font-size: 11px; color: var(--text-sub); letter-spacing: 0.5px; margin-bottom: 4px; }
+    .inst-label { font-size: 11px; color: var(--text-sub); letter-spacing: 0.5px; margin-bottom: 2px; }
     .speed-value {
-      font-size: 36px;
+      font-size: 34px;
       font-weight: 900;
       line-height: 1;
       color: var(--text-value);
@@ -394,18 +391,18 @@ html_template = '''<!DOCTYPE html>
       font-variant-numeric: tabular-nums;
       letter-spacing: -1.2px;
     }
-    .speed-unit { font-size: 11px; color: var(--text-accent); font-weight: 700; margin-top: 3px; }
+    .speed-unit { font-size: 11px; color: var(--text-accent); font-weight: 700; margin-top: 2px; }
 
     .heading-arrow {
-      font-size: 28px;
+      font-size: 26px;
       color: var(--text-accent);
-      transition: transform 0.2s linear;
+      transition: transform 0.15s ease-out;
       display: inline-block;
       line-height: 1;
     }
-    .heading-text { font-size: 13px; font-weight: 700; color: var(--text-main); margin-top: 4px; }
+    .heading-text { font-size: 12.5px; font-weight: 700; color: var(--text-main); margin-top: 3px; }
     .target-count { font-size: 26px; font-weight: 800; line-height: 1; color: var(--text-main); }
-    .inst-divider { width: 1px; height: 38px; background: var(--border-subtle); }
+    .inst-divider { width: 1px; height: 34px; background: var(--border-subtle); }
 
     .controls-grid {
       display: grid;
@@ -414,12 +411,12 @@ html_template = '''<!DOCTYPE html>
     }
 
     .btn-act {
-      min-height: 56px;
+      min-height: 52px;
       border: var(--btn-border);
       background: var(--btn-bg);
       color: var(--btn-text);
-      border-radius: 14px;
-      padding: 8px 4px;
+      border-radius: 12px;
+      padding: 6px 4px;
       font-size: 11.5px;
       font-weight: 800;
       cursor: pointer;
@@ -427,7 +424,7 @@ html_template = '''<!DOCTYPE html>
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 4px;
+      gap: 3px;
       transition: all 0.15s cubic-bezier(0.2, 0.9, 0.4, 1);
     }
     .btn-act:active { transform: translateY(2px) scale(0.96); }
@@ -436,9 +433,9 @@ html_template = '''<!DOCTYPE html>
       border: var(--btn-active-border);
       color: var(--btn-active-text);
     }
-    .btn-act svg { width: 18px; height: 18px; stroke-width: 2.3; }
+    .btn-act svg { width: 17px; height: 17px; stroke-width: 2.3; }
 
-    /* 浮动工具栏 */
+    /* 浮动右侧工具栏 */
     .floating-tools {
       position: absolute;
       right: 14px;
@@ -447,12 +444,12 @@ html_template = '''<!DOCTYPE html>
       z-index: 1000;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
     .btn-tool {
-      width: 50px;
-      height: 50px;
-      border-radius: 16px;
+      width: 48px;
+      height: 48px;
+      border-radius: 15px;
       background: var(--card-bg);
       backdrop-filter: var(--card-blur);
       -webkit-backdrop-filter: var(--card-blur);
@@ -468,68 +465,23 @@ html_template = '''<!DOCTYPE html>
     }
     .btn-tool:active { transform: translateY(2px) scale(0.92); }
 
-    /* 自动模式微标 */
     .badge-auto {
       position: absolute;
       bottom: 2px;
-      right: 4px;
-      font-size: 9px;
+      right: 3px;
+      font-size: 8.5px;
       font-weight: 900;
       background: var(--text-accent);
       color: #0b0f19;
-      border-radius: 4px;
-      padding: 1px 3px;
+      border-radius: 3px;
+      padding: 1px 2px;
       line-height: 1;
     }
 
-    /* ================= 5. 横屏宽屏车机双联屏适配 ================= */
-    @media (orientation: landscape) {
-      body { display: flex; flex-direction: row; }
-      .top-hud {
-        position: static;
-        width: 380px;
-        max-width: 44%;
-        min-width: 320px;
-        height: 100%;
-        background: var(--card-bg);
-        backdrop-filter: var(--card-blur);
-        -webkit-backdrop-filter: var(--card-blur);
-        border-right: var(--card-border);
-        padding: max(10px, env(safe-area-inset-top)) 16px max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        pointer-events: auto;
-        z-index: 1000;
-      }
-      .bottom-cockpit {
-        position: static;
-        width: 100%;
-        padding: 0;
-        pointer-events: auto;
-      }
-      .cockpit-panel {
-        width: 100%;
-        max-width: none;
-        background: transparent;
-        border: none;
-        box-shadow: none;
-        padding: 0;
-        margin: 0;
-      }
-      .speed-value { font-size: 52px; }
-      #map {
-        position: relative;
-        flex: 1;
-        height: 100%;
-      }
-      .floating-tools { right: max(14px, env(safe-area-inset-right)); }
-    }
-
-    /* ================= 6. 静态纯净前方雷达扇区 (彻底移除摇摆扫动，安定不晃眼) ================= */
+    /* 静态纯净前方雷达扇面 (不晃眼) */
     .leaflet-radar-cone {
       pointer-events: none;
-      transition: stroke 0.3s ease, fill 0.3s ease;
+      transition: stroke 0.25s ease, fill 0.25s ease;
       stroke-dasharray: 4, 4;
     }
 
@@ -546,7 +498,6 @@ html_template = '''<!DOCTYPE html>
       align-items: center;
       justify-content: center;
       transition: all 0.2s ease;
-      position: relative;
     }
     .camera-marker-pin svg {
       transform: rotate(45deg);
@@ -572,10 +523,10 @@ html_template = '''<!DOCTYPE html>
     .marker-cluster-large { background-color: rgba(37, 99, 235, 0.6) !important; }
     .marker-cluster-large div { background-color: rgba(37, 99, 235, 0.9) !important; color: #fff !important; font-weight: 700 !important; }
 
-    /* 车头标记 */
+    /* 动态旋转车头标 */
     .vehicle-core {
-      width: 30px;
-      height: 30px;
+      width: 32px;
+      height: 32px;
       background: #00f2fe;
       border: 3px solid #ffffff;
       border-radius: 50%;
@@ -583,15 +534,15 @@ html_template = '''<!DOCTYPE html>
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.2s ease;
+      transition: transform 0.15s ease-out;
     }
     .vehicle-pointer {
       width: 0;
       height: 0;
       border-left: 6px solid transparent;
       border-right: 6px solid transparent;
-      border-bottom: 12px solid #041226;
-      transform: translateY(-1px);
+      border-bottom: 13px solid #041226;
+      transform: translateY(-2px);
     }
 
     /* 启动手势遮罩 */
@@ -677,7 +628,6 @@ html_template = '''<!DOCTYPE html>
 
   <!-- 全屏外周余光识别层 -->
   <div class="peripheral-alert-frame" id="peripheral-alert-frame"></div>
-  <!-- 拟触觉高光光效层 -->
   <div id="haptic-visual-border"></div>
 
   <!-- 地图容器 -->
@@ -698,7 +648,7 @@ html_template = '''<!DOCTYPE html>
     </button>
   </div>
 
-  <!-- 顶部预警 HUD 卡片 -->
+  <!-- 顶部预警 HUD 卡片 (独立放置顶部) -->
   <div class="top-hud">
     <div class="alert-card status-safe" id="alert-card">
       <div class="hud-header">
@@ -722,48 +672,48 @@ html_template = '''<!DOCTYPE html>
         <div class="hud-progress-bar" id="hud-progress"></div>
       </div>
     </div>
+  </div>
 
-    <!-- 底部驾驶舱仪表 -->
-    <div class="bottom-cockpit">
-      <div class="cockpit-panel">
-        <div class="instruments-row">
-          <div class="inst-item">
-            <span class="inst-label">当前时速</span>
-            <div class="speed-value" id="inst-speed">0.0</div>
-            <span class="speed-unit">KM/H</span>
-          </div>
-          <div class="inst-divider"></div>
-          <div class="inst-item">
-            <span class="inst-label">行驶航向</span>
-            <div class="heading-arrow" id="inst-arrow">↑</div>
-            <div class="heading-text" id="inst-heading">正西 270°</div>
-          </div>
-          <div class="inst-divider"></div>
-          <div class="inst-item">
-            <span class="inst-label">预计到达</span>
-            <div class="target-count" id="inst-eta">--</div>
-            <span class="speed-unit">秒</span>
-          </div>
+  <!-- 底部驾驶舱仪表 (独立严谨固定在屏幕底部安全区) -->
+  <div class="bottom-cockpit">
+    <div class="cockpit-panel">
+      <div class="instruments-row">
+        <div class="inst-item">
+          <span class="inst-label">当前时速</span>
+          <div class="speed-value" id="inst-speed">0.0</div>
+          <span class="speed-unit">KM/H</span>
         </div>
+        <div class="inst-divider"></div>
+        <div class="inst-item">
+          <span class="inst-label">行驶航向</span>
+          <div class="heading-arrow" id="inst-arrow">↑</div>
+          <div class="heading-text" id="inst-heading">--°</div>
+        </div>
+        <div class="inst-divider"></div>
+        <div class="inst-item">
+          <span class="inst-label">预计到达</span>
+          <div class="target-count" id="inst-eta">--</div>
+          <span class="speed-unit">秒</span>
+        </div>
+      </div>
 
-        <div class="controls-grid">
-          <button class="btn-act active" id="btn-mode-sim">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            <span>模拟骑行</span>
-          </button>
-          <button class="btn-act" id="btn-mode-gps">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg>
-            <span>真机GPS</span>
-          </button>
-          <button class="btn-act" id="btn-dist-toggle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="6" x2="12" y2="12"/></svg>
-            <span id="lbl-dist-mode">自适应</span>
-          </button>
-          <button class="btn-act active" id="btn-voice-toggle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-            <span id="lbl-voice">语音开</span>
-          </button>
-        </div>
+      <div class="controls-grid">
+        <button class="btn-act active" id="btn-mode-gps">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg>
+          <span>真机GPS</span>
+        </button>
+        <button class="btn-act" id="btn-mode-sim">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span>模拟骑行</span>
+        </button>
+        <button class="btn-act" id="btn-dist-toggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="6" x2="12" y2="12"/></svg>
+          <span id="lbl-dist-mode">自适应</span>
+        </button>
+        <button class="btn-act active" id="btn-voice-toggle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          <span id="lbl-voice">语音开</span>
+        </button>
       </div>
     </div>
   </div>
@@ -786,10 +736,10 @@ html_template = '''<!DOCTYPE html>
       <h2 style="font-size:22px;font-weight:900;">骑行巡航雷达</h2>
       <p style="font-size:13.5px;color:#94a3b8;line-height:1.6;">
         专为 iPhone 骑行支架设计<br>
-        行驶方向预测 · 接近语音提示 · 屏幕常亮 · 后台保活<br>
+        前进方向指引 · 手机罗盘感知 · 电子眼精准提示<br>
         <span style="color:#00f2fe;font-weight:700;">已载入 1,830 个广州道路监控点位</span>
       </p>
-      <button class="btn-start-main" id="btn-start-experience">立即启程 · 解锁巡航</button>
+      <button class="btn-start-main" id="btn-start-experience">立即启程 · 开启巡航</button>
     </div>
   </div>
 
@@ -821,7 +771,7 @@ html_template = '''<!DOCTYPE html>
         let ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
         ret += (20.0 * Math.sin(6.0 * x * this.PI) + 20.0 * Math.sin(2.0 * x * this.PI)) * 2.0 / 3.0;
         ret += (20.0 * Math.sin(x * this.PI) + 40.0 * Math.sin(x / 3.0 * this.PI)) * 2.0 / 3.0;
-        ret += (150.0 * Math.sin(x / 12.0 * this.PI) + 300.0 * Math.sin(x / 3.0 * this.PI)) * 2.0 / 3.0;
+        ret += (150.0 * Math.sin(x / 12.0 * this.PI) + 300.0 * Math.sin(x / 30.0 * this.PI)) * 2.0 / 3.0;
         return ret;
       },
       wgs84ToGcj02: function(lng, lat) {
@@ -838,7 +788,7 @@ html_template = '''<!DOCTYPE html>
     };
 
     /* ==========================================================================
-       3. 地理几何与大圆航向推算
+       3. 大圆航向与距离几何推算
        ========================================================================== */
     const MathUtils = {
       DEG_TO_RAD: Math.PI / 180,
@@ -874,13 +824,14 @@ html_template = '''<!DOCTYPE html>
     };
 
     function headingToText(deg) {
+      if (deg === null || isNaN(deg)) return '等待航向';
       const dirs = ['正北', '东北', '正东', '东南', '正南', '西南', '正西', '西北'];
       const index = Math.round(deg / 45) % 8;
       return `${dirs[index]} ${Math.round(deg)}°`;
     }
 
     /* ==========================================================================
-       4. 算法核心 1: 点位语义方向识别与对向车道静音过滤
+       4. 点位语义方向识别
        ========================================================================== */
     const CARDINAL_HEADINGS = {
       '北': 0, '东北': 45, '东': 90, '东南': 135,
@@ -917,7 +868,7 @@ html_template = '''<!DOCTYPE html>
             directionText: `${mPair[1]}往${mPair[2]}`,
             fromDir: mPair[1],
             toDir: mPair[2],
-            controlledHeading: CARDINAL_HEADINGS[mPair[2]], // 东往西 => 西 270°
+            controlledHeading: CARDINAL_HEADINGS[mPair[2]],
             isOmnidirectional: false,
             toleranceDeg: 45
           };
@@ -972,7 +923,7 @@ html_template = '''<!DOCTYPE html>
     }
 
     /* ==========================================================================
-       5. 算法核心 2: 车速自适应预警距离引擎 (10~40 km/h 动态平滑)
+       5. 车速自适应预警距离引擎
        ========================================================================== */
     class SpeedAdaptiveWarningEngine {
       constructor() {
@@ -997,54 +948,95 @@ html_template = '''<!DOCTYPE html>
     }
 
     /* ==========================================================================
-       6. 算法核心 3: GPS 航向抗抖动与红绿灯静止锁存引擎
+       6. 车辆前进方向多源融合算法 (前进时坚决指向前进方向，静止时跟随罗盘)
        ========================================================================== */
-    class HeadingFilterAndLockEngine {
+    class VehicleMotionHeadingTracker {
       constructor() {
-        this.stopSpeedThreshold = 3.0;
-        this.moveSpeedThreshold = 4.5;
-        this.isStationary = true;
-        this.heading = 270;
-        this.lastCruisingHeading = 270;
-        this.vecX = -1;
-        this.vecY = 0;
+        this.currentHeading = 0; // 当前车头与雷达朝向
+        this.compassHeading = null; // 手机硬件指南针朝向 (0~360)
+        this.motionHeading = null; // 车辆前进位移真方位 (0~360)
+
+        this.anchorGpsPoint = null; // 用于计算位移航向的基准锚点
+        this.lastGpsPoint = null;
+        this.currentSpeedKmh = 0;
+        this.hasMoved = false;
+
+        // 平滑向量
+        this.vecX = 0;
+        this.vecY = 1;
       }
 
-      update(rawHeading, speedKmh) {
-        const currentSpeed = Math.max(0, typeof speedKmh === 'number' && !isNaN(speedKmh) ? speedKmh : 0);
+      // 收到 iPhone 电子罗盘事件 (DeviceOrientation)
+      updateCompass(compassDeg) {
+        if (compassDeg === null || isNaN(compassDeg)) return;
+        this.compassHeading = (compassDeg % 360 + 360) % 360;
 
-        if (this.isStationary) {
-          if (currentSpeed >= this.moveSpeedThreshold) this.isStationary = false;
-        } else {
-          if (currentSpeed < this.stopSpeedThreshold) {
-            this.isStationary = true;
-            this.lastCruisingHeading = this.heading;
+        // 若车辆处于静止或尚未开始行进 (速度 < 4.0 km/h)，直接以罗盘为准
+        if (this.currentSpeedKmh < 4.0 && !this.hasMoved) {
+          this.applyHeading(this.compassHeading, 0.3);
+        }
+      }
+
+      // 收到真实 GPS 经纬度与车速采样
+      updateGPS(lat, lng, speedKmh) {
+        if (speedKmh !== null && !isNaN(speedKmh) && speedKmh >= 0) {
+          this.currentSpeedKmh = speedKmh;
+        }
+
+        const curPoint = { lat, lng };
+
+        if (!this.anchorGpsPoint) {
+          this.anchorGpsPoint = curPoint;
+          this.lastGpsPoint = curPoint;
+          return this.currentHeading;
+        }
+
+        // 计算与上一次基准锚点的累积位移距离
+        const displacement = MathUtils.getDistance(this.anchorGpsPoint.lat, this.anchorGpsPoint.lng, lat, lng);
+
+        // 当车辆前进产生有效位移 (>= 2.5 米) 时，精准计算车辆真实前进航向！
+        if (displacement >= 2.5) {
+          this.hasMoved = true;
+          // 计算车辆前进真实大圆航向 (Course Over Ground)
+          this.motionHeading = MathUtils.getBearing(this.anchorGpsPoint.lat, this.anchorGpsPoint.lng, lat, lng);
+          // 更新锚点为当前位置
+          this.anchorGpsPoint = curPoint;
+        }
+
+        this.lastGpsPoint = curPoint;
+
+        // 核心裁决法则：
+        // 1. 如果车辆处于行进中 (speed >= 3.0 km/h 或者已经产生有效前进航向)
+        // -> 坚决以车辆前进航向 (motionHeading) 为准！
+        if (this.currentSpeedKmh >= 3.0 && this.motionHeading !== null) {
+          this.applyHeading(this.motionHeading, 0.45);
+        } else if (this.currentSpeedKmh < 3.0) {
+          // 2. 如果车辆在红绿灯路口静止，优先使用手机支架的指南针罗盘朝向
+          if (this.compassHeading !== null) {
+            this.applyHeading(this.compassHeading, 0.25);
           }
+          // 否则保持最后一次前进航向不变 (锁存)
         }
 
-        if (this.isStationary) {
-          return this.lastCruisingHeading;
-        }
+        return this.currentHeading;
+      }
 
-        if (typeof rawHeading === 'number' && !isNaN(rawHeading) && rawHeading >= 0) {
-          const targetRad = rawHeading * MathUtils.DEG_TO_RAD;
-          const alpha = 0.35;
-          this.vecX = (1 - alpha) * this.vecX + alpha * Math.sin(targetRad);
-          this.vecY = (1 - alpha) * this.vecY + alpha * Math.cos(targetRad);
-          const norm = Math.hypot(this.vecX, this.vecY);
-          if (norm > 1e-6) {
-            this.vecX /= norm;
-            this.vecY /= norm;
-          }
-          this.heading = (Math.atan2(this.vecX, this.vecY) * MathUtils.RAD_TO_DEG + 360) % 360;
-          this.lastCruisingHeading = this.heading;
+      // 单位圆周矢量插值平滑，杜绝 0° 与 360° 翻折跳跃
+      applyHeading(targetDeg, alpha = 0.35) {
+        const rad = targetDeg * MathUtils.DEG_TO_RAD;
+        this.vecX = (1 - alpha) * this.vecX + alpha * Math.sin(rad);
+        this.vecY = (1 - alpha) * this.vecY + alpha * Math.cos(rad);
+        const norm = Math.hypot(this.vecX, this.vecY);
+        if (norm > 1e-6) {
+          this.vecX /= norm;
+          this.vecY /= norm;
         }
-        return this.heading;
+        this.currentHeading = (Math.atan2(this.vecX, this.vecY) * MathUtils.RAD_TO_DEG + 360) % 360;
       }
     }
 
     /* ==========================================================================
-       7. 专业声音工程: 车规级 Web Audio 双音和弦 + 释压通过音 + 文本精简
+       7. 声音工程与语音精简引擎
        ========================================================================== */
     class AudioEngine {
       constructor() {
@@ -1291,14 +1283,11 @@ html_template = '''<!DOCTYPE html>
        9. 东八区时间 (UTC+8) 自动日夜主题调度器
        ========================================================================== */
     const TimeThemeManager = {
-      // 获取东八区精准时间 (无论客户端设置什么时区，均准确定位 UTC+8 北京时间)
       getBeijingDate: function() {
         const now = new Date();
         const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
         return new Date(utcMs + (8 * 3600000));
       },
-
-      // 获取当前东八区对应主题: 06:30 ~ 18:30 为日间模式，其余为夜间模式
       getAutoTheme: function() {
         const bj = this.getBeijingDate();
         const minutes = bj.getHours() * 60 + bj.getMinutes();
@@ -1320,24 +1309,21 @@ html_template = '''<!DOCTYPE html>
         this.clusterGroup = null;
         this.markerInstances = [];
         this.vehicleMarker = null;
-        this.radarSector = null; // 纯净静态前方探测扇面 (不晃眼)
+        this.radarSector = null;
 
-        // 算法组件
         this.directionParser = new PointDirectionParser();
         this.speedEngine = new SpeedAdaptiveWarningEngine();
-        this.headingEngine = new HeadingFilterAndLockEngine();
+        this.motionTracker = new VehicleMotionHeadingTracker(); // 车辆前进航向追踪融合器
 
-        // 状态
         this.currentPos = { lat: 23.1315, lng: 113.2750 };
         this.heading = 270;
-        this.speedKmh = 29.0;
+        this.speedKmh = 0.0;
         this.warningDistance = 120;
         this.fovAngle = 40;
-        this.mode = 'sim';
+        this.mode = 'gps'; // 默认启动直接进入真实真机 GPS 模式！
         this.distMode = 'auto';
         this.mapFollow = true;
 
-        // 主题模式: 'auto' (东八区时间自动), 'sunlight' (手动日间), 'night' (手动夜间)
         this.themeMode = 'auto';
         this.currentTheme = 'night';
 
@@ -1345,7 +1331,6 @@ html_template = '''<!DOCTYPE html>
         this.activeTarget = null;
         this.activeMarker = null;
 
-        // 模拟路线
         this.simPath = [
           [23.1314, 113.2980],
           [23.1315, 113.2840],
@@ -1381,8 +1366,8 @@ html_template = '''<!DOCTYPE html>
         this.elDistBox = document.getElementById('hud-dist-box');
         this.elPeripheralFrame = document.getElementById('peripheral-alert-frame');
 
-        document.getElementById('btn-mode-sim').onclick = () => this.setMode('sim');
         document.getElementById('btn-mode-gps').onclick = () => this.setMode('gps');
+        document.getElementById('btn-mode-sim').onclick = () => this.setMode('sim');
         document.getElementById('btn-dist-toggle').onclick = () => this.cycleWarningDistance();
         document.getElementById('btn-voice-toggle').onclick = () => this.toggleVoice();
         document.getElementById('btn-recenter').onclick = () => this.recenter();
@@ -1394,14 +1379,12 @@ html_template = '''<!DOCTYPE html>
         };
       }
 
-      /* 初始化根据东八区自动设置主题 */
       initTheme() {
         const autoInfo = TimeThemeManager.getAutoTheme();
         this.themeMode = 'auto';
         this.applyTheme(autoInfo.theme, false);
       }
 
-      /* 应用主题样式 */
       applyTheme(theme, announce = false) {
         this.currentTheme = theme;
         document.body.className = `theme-${theme}`;
@@ -1418,7 +1401,6 @@ html_template = '''<!DOCTYPE html>
           autoBadge.style.display = (this.themeMode === 'auto') ? 'block' : 'none';
         }
 
-        // 更新雷达扇面色泽
         if (this.radarSector) {
           const col = (theme === 'sunlight') ? '#0284c7' : '#00f2fe';
           const fill = (theme === 'sunlight') ? 'rgba(2, 132, 199, 0.20)' : 'rgba(0, 242, 254, 0.16)';
@@ -1436,7 +1418,6 @@ html_template = '''<!DOCTYPE html>
         }
       }
 
-      /* 循环切换主题模式: auto -> sunlight -> night -> auto */
       cycleThemeMode() {
         HapticsEngine.vibrate('toggle');
         if (this.themeMode === 'auto') {
@@ -1452,7 +1433,6 @@ html_template = '''<!DOCTYPE html>
         }
       }
 
-      /* 每 30 秒检查一次东八区时间，自动跨越日出/日落时切换 */
       startTimeWatcher() {
         setInterval(() => {
           if (this.themeMode === 'auto') {
@@ -1467,7 +1447,6 @@ html_template = '''<!DOCTYPE html>
       initMap() {
         this.map = L.map('map', { zoomControl: false, attributionControl: false }).setView([this.currentPos.lat, this.currentPos.lng], 16);
 
-        // 高德矢量街道瓦片
         L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
           subdomains: ['1', '2', '3', '4'],
           maxZoom: 19
@@ -1482,14 +1461,12 @@ html_template = '''<!DOCTYPE html>
         });
         this.map.addLayer(this.clusterGroup);
 
-        // 车头标记
         const vehicleHtml = `<div class="vehicle-core" id="car-core"><div class="vehicle-pointer"></div></div>`;
         this.vehicleMarker = L.marker([this.currentPos.lat, this.currentPos.lng], {
           icon: L.divIcon({ html: vehicleHtml, className: 'custom-vehicle-icon', iconSize: [32, 32], iconAnchor: [16, 16] }),
           zIndexOffset: 2000
         }).addTo(this.map);
 
-        // 静态纯净前方雷达扇面 (安定不晃眼)
         const isSun = (this.currentTheme === 'sunlight');
         this.radarSector = L.polygon([], {
           color: isSun ? '#0284c7' : '#00f2fe',
@@ -1541,7 +1518,17 @@ html_template = '''<!DOCTYPE html>
         audio.speak('已展开全广州摄像头分布');
       }
 
-      /* 更新静态稳定雷达扇面 (跟随车头朝向平滑旋转，不再左右摇摆) */
+      // 更新手机电子罗盘数据 (静止或慢速时实时响应车把旋转)
+      onCompassUpdate(compassHeading) {
+        this.motionTracker.updateCompass(compassHeading);
+        if (this.mode === 'gps' && this.speedKmh < 4.0) {
+          this.heading = this.motionTracker.currentHeading;
+          this.updateRadarSector();
+          this.updateCockpit();
+        }
+      }
+
+      // 更新纯净雷达扇区 (跟随车头前进方向平滑指向)
       updateRadarSector() {
         const center = [this.currentPos.lat, this.currentPos.lng];
         const dist = this.warningDistance;
@@ -1557,11 +1544,11 @@ html_template = '''<!DOCTYPE html>
         points.push(center);
         this.radarSector.setLatLngs(points);
 
+        // 旋转车头图标: 箭头永远指向前进方向
         const core = document.getElementById('car-core');
         if (core) core.style.transform = `rotate(${this.heading}deg)`;
       }
 
-      /* 核心：航向预测、对向车道过滤与接近评估 */
       evaluateNearbyTargets() {
         let candidate = null;
         let candidateMarker = null;
@@ -1584,7 +1571,6 @@ html_template = '''<!DOCTYPE html>
           const angleOffset = MathUtils.getAngleDiff(this.heading, bearingToPoint);
           if (angleOffset > this.fovAngle) continue;
 
-          // 核心方向匹配: 对向车道反向静音过滤！
           const dirInfo = this.directionParser.parsePointDirection(p[2]);
           const matchResult = this.directionParser.evaluateRiderHeading(this.heading, dirInfo);
           if (!matchResult.shouldAlert) continue;
@@ -1707,6 +1693,53 @@ html_template = '''<!DOCTYPE html>
         this.elArrow.style.transform = `rotate(${this.heading}deg)`;
       }
 
+      /* ================= 真实 iPhone GPS 巡航 (前进时强力追踪前进方向) ================= */
+      startGPS() {
+        this.stopGPS();
+        if (!('geolocation' in navigator)) {
+          alert('当前浏览器不支持 GPS 定位');
+          return;
+        }
+
+        // 切换为真实定位提示
+        this.elStatusText.innerText = '正在搜索 GPS 卫星...';
+
+        this.gpsWatchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            const wgsLat = pos.coords.latitude;
+            const wgsLng = pos.coords.longitude;
+            // 消除 iOS 在国内的偏离
+            const [gcjLng, gcjLat] = CoordTransform.wgs84ToGcj02(wgsLng, wgsLat);
+
+            let spdKmh = 0.0;
+            if (pos.coords.speed !== null && pos.coords.speed >= 0) {
+              spdKmh = pos.coords.speed * 3.6;
+            }
+            this.speedKmh = spdKmh;
+
+            // 车辆前进方向多源融合算法：前进时坚决指向前进航向！
+            this.heading = this.motionTracker.updateGPS(gcjLat, gcjLng, spdKmh);
+
+            this.currentPos = { lat: gcjLat, lng: gcjLng };
+            this.vehicleMarker.setLatLng([gcjLat, gcjLng]);
+            this.updateRadarSector();
+            this.updateCockpit();
+            this.evaluateNearbyTargets();
+
+            if (this.mapFollow) this.map.panTo([gcjLat, gcjLng], { animate: true });
+          },
+          (err) => console.warn('GPS Error:', err.message),
+          { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+        );
+      }
+
+      stopGPS() {
+        if (this.gpsWatchId !== null) {
+          navigator.geolocation.clearWatch(this.gpsWatchId);
+          this.gpsWatchId = null;
+        }
+      }
+
       startSimulation() {
         this.stopSimulation();
         this.simStep = 0;
@@ -1727,8 +1760,7 @@ html_template = '''<!DOCTYPE html>
           const p2 = this.simPath[this.simStep + 1];
 
           const legDistance = MathUtils.getDistance(p1[0], p1[1], p2[0], p2[1]);
-          const targetHeading = MathUtils.getBearing(p1[0], p1[1], p2[0], p2[1]);
-          this.heading = this.headingEngine.update(targetHeading, this.speedKmh);
+          this.heading = MathUtils.getBearing(p1[0], p1[1], p2[0], p2[1]);
 
           this.simProgress += distPerTick / legDistance;
           if (this.simProgress >= 1.0) {
@@ -1756,58 +1788,6 @@ html_template = '''<!DOCTYPE html>
         }
       }
 
-      startGPS() {
-        this.stopGPS();
-        if (!('geolocation' in navigator)) {
-          alert('当前浏览器不支持 GPS 定位');
-          return;
-        }
-
-        let lastGpsPoint = null;
-
-        this.gpsWatchId = navigator.geolocation.watchPosition(
-          (pos) => {
-            const wgsLat = pos.coords.latitude;
-            const wgsLng = pos.coords.longitude;
-            const [gcjLng, gcjLat] = CoordTransform.wgs84ToGcj02(wgsLng, wgsLat);
-
-            if (pos.coords.speed !== null && pos.coords.speed >= 0) {
-              this.speedKmh = pos.coords.speed * 3.6;
-            }
-
-            let rawH = pos.coords.heading;
-            if (rawH === null || isNaN(rawH)) {
-              if (lastGpsPoint) {
-                const moveDist = MathUtils.getDistance(lastGpsPoint.lat, lastGpsPoint.lng, gcjLat, gcjLng);
-                if (moveDist >= 2.0) {
-                  rawH = MathUtils.getBearing(lastGpsPoint.lat, lastGpsPoint.lng, gcjLat, gcjLng);
-                }
-              }
-            }
-
-            this.heading = this.headingEngine.update(rawH, this.speedKmh);
-            lastGpsPoint = { lat: gcjLat, lng: gcjLng };
-            this.currentPos = { lat: gcjLat, lng: gcjLng };
-
-            this.vehicleMarker.setLatLng([gcjLat, gcjLng]);
-            this.updateRadarSector();
-            this.updateCockpit();
-            this.evaluateNearbyTargets();
-
-            if (this.mapFollow) this.map.panTo([gcjLat, gcjLng], { animate: true });
-          },
-          (err) => console.warn('GPS Error:', err.message),
-          { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
-        );
-      }
-
-      stopGPS() {
-        if (this.gpsWatchId !== null) {
-          navigator.geolocation.clearWatch(this.gpsWatchId);
-          this.gpsWatchId = null;
-        }
-      }
-
       setMode(mode) {
         this.mode = mode;
         const btnSim = document.getElementById('btn-mode-sim');
@@ -1817,13 +1797,13 @@ html_template = '''<!DOCTYPE html>
           btnGps.classList.remove('active');
           this.stopGPS();
           this.startSimulation();
-          audio.speak('已开启模拟骑行演练');
+          audio.speak('已开启模拟路线演练');
         } else {
           btnGps.classList.add('active');
           btnSim.classList.remove('active');
           this.stopSimulation();
           this.startGPS();
-          audio.speak('已启动真机GPS高精巡航');
+          audio.speak('已启动真机GPS高精巡航，前进时方向将自动指向行驶方向');
         }
       }
 
@@ -1885,13 +1865,28 @@ html_template = '''<!DOCTYPE html>
     });
 
     let app = null;
+
+    // 启动交互: 同时解锁音频、请求 iOS 动作罗盘权限、启动 GPS
     document.getElementById('btn-start-experience').addEventListener('click', () => {
       audio.init();
       audio.playApproachChime();
-      audio.speak('骑行巡航雷达已启动，祝您骑行平安');
+      audio.speak('骑行巡航雷达已启动');
 
       bgKeeper.start();
       requestWakeLock();
+
+      // 核心：请求 iOS 专属电子罗盘权限 (DeviceOrientationEvent.requestPermission)
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+          .then(res => {
+            if (res === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientationEvent, true);
+            }
+          })
+          .catch(err => console.warn('Compass permission rejected:', err));
+      } else {
+        window.addEventListener('deviceorientation', handleOrientationEvent, true);
+      }
 
       document.getElementById('start-overlay').style.display = 'none';
 
@@ -1902,8 +1897,23 @@ html_template = '''<!DOCTYPE html>
       }
 
       app = new RadarCruiseApp();
-      app.startSimulation();
+      app.startGPS(); // 默认直接进入真实 GPS 定位巡航模式！
     });
+
+    // 电子罗盘实时事件监听
+    function handleOrientationEvent(e) {
+      if (!app) return;
+      let heading = null;
+      // iOS Safari 专有高精度绝对真北罗盘朝向
+      if (typeof e.webkitCompassHeading !== 'undefined' && e.webkitCompassHeading !== null) {
+        heading = e.webkitCompassHeading;
+      } else if (e.alpha !== null) {
+        heading = (360 - e.alpha) % 360;
+      }
+      if (heading !== null && !isNaN(heading)) {
+        app.onCompassUpdate(heading);
+      }
+    }
   </script>
 </body>
 </html>
@@ -1912,4 +1922,8 @@ html_template = '''<!DOCTYPE html>
 with open('rider_radar.html', 'w', encoding='utf-8') as f:
     f.write(html_template)
 
-print("rider_radar.html successfully regenerated! Size:", len(html_template), "bytes")
+# 同步到 index.html
+with open('index.html', 'w', encoding='utf-8') as f:
+    f.write(html_template)
+
+print("rider_radar.html & index.html successfully regenerated! Size:", len(html_template), "bytes")
