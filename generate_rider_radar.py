@@ -85,7 +85,7 @@ html_template = '''<!DOCTYPE html>
     /* ================= 1. 双主题配色系统 ================= */
     body.theme-night {
       --bg-dark: #080c16;
-      --card-bg: rgba(13, 20, 36, 0.90);
+      --card-bg: rgba(13, 20, 36, 0.92);
       --card-blur: blur(20px);
       --card-border: 1px solid rgba(0, 242, 254, 0.22);
       --card-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 1px rgba(0, 242, 254, 0.35);
@@ -214,7 +214,7 @@ html_template = '''<!DOCTYPE html>
       100% { box-shadow: inset 0 0 0 transparent; }
     }
 
-    /* ================= 3. 顶部 HUD 独立容器 (只放预警信息，严禁套入底部仪表) ================= */
+    /* ================= 3. 顶部 HUD 独立容器 (适配 iPhone 16 灵动岛防遮挡) ================= */
     .top-hud {
       position: absolute;
       top: 0;
@@ -225,7 +225,10 @@ html_template = '''<!DOCTYPE html>
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: max(10px, env(safe-area-inset-top)) 14px 0 14px;
+      /* iPhone 16 灵动岛下边界高度约 54px，硬性留出充足间距 */
+      padding-top: max(56px, calc(env(safe-area-inset-top, 20px) + 14px));
+      padding-left: 14px;
+      padding-right: 14px;
     }
 
     .alert-card {
@@ -360,7 +363,7 @@ html_template = '''<!DOCTYPE html>
       -webkit-backdrop-filter: var(--card-blur);
       border: var(--card-border);
       border-radius: 22px;
-      padding: 12px 16px;
+      padding: 12px 18px;
       box-shadow: var(--card-shadow);
       margin-bottom: 4px;
       transition: all 0.3s ease;
@@ -393,10 +396,11 @@ html_template = '''<!DOCTYPE html>
     }
     .speed-unit { font-size: 11px; color: var(--text-accent); font-weight: 700; margin-top: 2px; }
 
+    /* 车头方向指示器: 极速直接渲染，无迟滞 */
     .heading-arrow {
       font-size: 26px;
       color: var(--text-accent);
-      transition: transform 0.15s ease-out;
+      transition: transform 0.05s linear;
       display: inline-block;
       line-height: 1;
     }
@@ -404,10 +408,11 @@ html_template = '''<!DOCTYPE html>
     .target-count { font-size: 26px; font-weight: 800; line-height: 1; color: var(--text-main); }
     .inst-divider { width: 1px; height: 34px; background: var(--border-subtle); }
 
+    /* 精简 3 键式底部大触控区 (删除模拟骑行，按键更宽更大易按) */
     .controls-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
     }
 
     .btn-act {
@@ -415,9 +420,9 @@ html_template = '''<!DOCTYPE html>
       border: var(--btn-border);
       background: var(--btn-bg);
       color: var(--btn-text);
-      border-radius: 12px;
-      padding: 6px 4px;
-      font-size: 11.5px;
+      border-radius: 14px;
+      padding: 8px 6px;
+      font-size: 12.5px;
       font-weight: 800;
       cursor: pointer;
       display: flex;
@@ -433,7 +438,7 @@ html_template = '''<!DOCTYPE html>
       border: var(--btn-active-border);
       color: var(--btn-active-text);
     }
-    .btn-act svg { width: 17px; height: 17px; stroke-width: 2.3; }
+    .btn-act svg { width: 19px; height: 19px; stroke-width: 2.3; }
 
     /* 浮动右侧工具栏 */
     .floating-tools {
@@ -478,7 +483,7 @@ html_template = '''<!DOCTYPE html>
       line-height: 1;
     }
 
-    /* 静态纯净前方雷达扇面 (不晃眼) */
+    /* 静态纯净前方雷达扇区 (不晃眼) */
     .leaflet-radar-cone {
       pointer-events: none;
       transition: stroke 0.25s ease, fill 0.25s ease;
@@ -523,7 +528,7 @@ html_template = '''<!DOCTYPE html>
     .marker-cluster-large { background-color: rgba(37, 99, 235, 0.6) !important; }
     .marker-cluster-large div { background-color: rgba(37, 99, 235, 0.9) !important; color: #fff !important; font-weight: 700 !important; }
 
-    /* 动态旋转车头标 */
+    /* 动态旋转车头标: 0.05s 极速线性响应，绝无慢半拍 */
     .vehicle-core {
       width: 32px;
       height: 32px;
@@ -534,7 +539,7 @@ html_template = '''<!DOCTYPE html>
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.15s ease-out;
+      transition: transform 0.05s linear;
     }
     .vehicle-pointer {
       width: 0;
@@ -648,20 +653,20 @@ html_template = '''<!DOCTYPE html>
     </button>
   </div>
 
-  <!-- 顶部预警 HUD 卡片 (独立放置顶部) -->
+  <!-- 顶部预警 HUD 卡片 (防 iPhone 16 灵动岛遮挡) -->
   <div class="top-hud">
     <div class="alert-card status-safe" id="alert-card">
       <div class="hud-header">
         <span class="badge-status" id="badge-status">
           <span class="dot"></span>
-          <span id="status-text">巡航雷达运行中</span>
+          <span id="status-text">GPS 高精巡航中</span>
         </span>
         <span id="hud-sub-status">车速自适应预警</span>
       </div>
       <div class="hud-main">
         <div class="hud-title-box">
           <div class="hud-point-title" id="alert-title">前方道路通畅</div>
-          <div class="hud-point-sub" id="alert-desc">航向正常 · 雷达守护中</div>
+          <div class="hud-point-sub" id="alert-desc">航向正常 · 沿途监控扫描中</div>
         </div>
         <div class="hud-dist-box" id="hud-dist-box">
           <div class="hud-dist-value" id="alert-distance">--</div>
@@ -697,14 +702,11 @@ html_template = '''<!DOCTYPE html>
         </div>
       </div>
 
+      <!-- 精简 3 键大触控区 (已删除模拟骑行) -->
       <div class="controls-grid">
-        <button class="btn-act active" id="btn-mode-gps">
+        <button class="btn-act active" id="btn-recenter-main">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg>
-          <span>真机GPS</span>
-        </button>
-        <button class="btn-act" id="btn-mode-sim">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <span>模拟骑行</span>
+          <span>车头居中</span>
         </button>
         <button class="btn-act" id="btn-dist-toggle">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="6" x2="12" y2="12"/></svg>
@@ -736,7 +738,7 @@ html_template = '''<!DOCTYPE html>
       <h2 style="font-size:22px;font-weight:900;">骑行巡航雷达</h2>
       <p style="font-size:13.5px;color:#94a3b8;line-height:1.6;">
         专为 iPhone 骑行支架设计<br>
-        前进方向指引 · 手机罗盘感知 · 电子眼精准提示<br>
+        前进方向指引 · 罗盘极速响应 · 自适应视野跟随<br>
         <span style="color:#00f2fe;font-weight:700;">已载入 1,830 个广州道路监控点位</span>
       </p>
       <button class="btn-start-main" id="btn-start-experience">立即启程 · 开启巡航</button>
@@ -748,14 +750,8 @@ html_template = '''<!DOCTYPE html>
   <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
   <script>
-    /* ==========================================================================
-       1. 监控点位数据 (广州 1,830 点)
-       ========================================================================== */
     const ALL_POINTS = ''' + points_json + ''';
 
-    /* ==========================================================================
-       2. WGS-84 转 GCJ-02 高精度纠偏算法
-       ========================================================================== */
     const CoordTransform = {
       PI: 3.1415926535897932384626,
       a: 6378245.0,
@@ -787,9 +783,6 @@ html_template = '''<!DOCTYPE html>
       }
     };
 
-    /* ==========================================================================
-       3. 大圆航向与距离几何推算
-       ========================================================================== */
     const MathUtils = {
       DEG_TO_RAD: Math.PI / 180,
       RAD_TO_DEG: 180 / Math.PI,
@@ -824,15 +817,12 @@ html_template = '''<!DOCTYPE html>
     };
 
     function headingToText(deg) {
-      if (deg === null || isNaN(deg)) return '等待航向';
+      if (deg === null || isNaN(deg)) return '等待定位';
       const dirs = ['正北', '东北', '正东', '东南', '正南', '西南', '正西', '西北'];
       const index = Math.round(deg / 45) % 8;
       return `${dirs[index]} ${Math.round(deg)}°`;
     }
 
-    /* ==========================================================================
-       4. 点位语义方向识别
-       ========================================================================== */
     const CARDINAL_HEADINGS = {
       '北': 0, '东北': 45, '东': 90, '东南': 135,
       '南': 180, '西南': 225, '西': 270, '西北': 315
@@ -922,17 +912,14 @@ html_template = '''<!DOCTYPE html>
       }
     }
 
-    /* ==========================================================================
-       5. 车速自适应预警距离引擎
-       ========================================================================== */
     class SpeedAdaptiveWarningEngine {
       constructor() {
         this.targetLeadTimeSec = 13.5;
         this.minDistance = 60.0;
         this.maxDistance = 180.0;
         this.currentDistance = 120.0;
-        this.filteredSpeedKmh = 28.0;
-        this.speedAlpha = 0.25;
+        this.filteredSpeedKmh = 25.0;
+        this.speedAlpha = 0.3;
       }
 
       update(rawSpeedKmh) {
@@ -941,43 +928,35 @@ html_template = '''<!DOCTYPE html>
 
         const speedMs = this.filteredSpeedKmh / 3.6;
         const ideal = MathUtils.clamp(speedMs * this.targetLeadTimeSec + 8.0, this.minDistance, this.maxDistance);
-        
-        this.currentDistance += (ideal - this.currentDistance) * 0.2;
+        this.currentDistance += (ideal - this.currentDistance) * 0.25;
         return Math.round(this.currentDistance);
       }
     }
 
     /* ==========================================================================
-       6. 车辆前进方向多源融合算法 (前进时坚决指向前进方向，静止时跟随罗盘)
+       6. 极速响应车辆前进方向追踪器 (陀螺仪零延迟跟手，运动时严格指向前进方向)
        ========================================================================== */
     class VehicleMotionHeadingTracker {
       constructor() {
-        this.currentHeading = 0; // 当前车头与雷达朝向
-        this.compassHeading = null; // 手机硬件指南针朝向 (0~360)
-        this.motionHeading = null; // 车辆前进位移真方位 (0~360)
-
-        this.anchorGpsPoint = null; // 用于计算位移航向的基准锚点
-        this.lastGpsPoint = null;
+        this.currentHeading = 0;
+        this.compassHeading = null;
+        this.motionHeading = null;
+        this.anchorGpsPoint = null;
         this.currentSpeedKmh = 0;
-        this.hasMoved = false;
-
-        // 平滑向量
-        this.vecX = 0;
-        this.vecY = 1;
       }
 
-      // 收到 iPhone 电子罗盘事件 (DeviceOrientation)
+      // 电子罗盘实时事件: 零延迟直接生效，转把即动！
       updateCompass(compassDeg) {
         if (compassDeg === null || isNaN(compassDeg)) return;
         this.compassHeading = (compassDeg % 360 + 360) % 360;
 
-        // 若车辆处于静止或尚未开始行进 (速度 < 4.0 km/h)，直接以罗盘为准
-        if (this.currentSpeedKmh < 4.0 && !this.hasMoved) {
-          this.applyHeading(this.compassHeading, 0.3);
+        // 当静止或极低速 (< 4 km/h)，直接使用电子罗盘朝向，绝不迟钝！
+        if (this.currentSpeedKmh < 4.0) {
+          this.currentHeading = this.compassHeading;
         }
       }
 
-      // 收到真实 GPS 经纬度与车速采样
+      // GPS 定位事件
       updateGPS(lat, lng, speedKmh) {
         if (speedKmh !== null && !isNaN(speedKmh) && speedKmh >= 0) {
           this.currentSpeedKmh = speedKmh;
@@ -987,57 +966,28 @@ html_template = '''<!DOCTYPE html>
 
         if (!this.anchorGpsPoint) {
           this.anchorGpsPoint = curPoint;
-          this.lastGpsPoint = curPoint;
           return this.currentHeading;
         }
 
-        // 计算与上一次基准锚点的累积位移距离
         const displacement = MathUtils.getDistance(this.anchorGpsPoint.lat, this.anchorGpsPoint.lng, lat, lng);
 
-        // 当车辆前进产生有效位移 (>= 2.5 米) 时，精准计算车辆真实前进航向！
-        if (displacement >= 2.5) {
-          this.hasMoved = true;
-          // 计算车辆前进真实大圆航向 (Course Over Ground)
+        // 当产生大于 2.2 米的位移时，计算真实前进航向
+        if (displacement >= 2.2) {
           this.motionHeading = MathUtils.getBearing(this.anchorGpsPoint.lat, this.anchorGpsPoint.lng, lat, lng);
-          // 更新锚点为当前位置
           this.anchorGpsPoint = curPoint;
         }
 
-        this.lastGpsPoint = curPoint;
-
-        // 核心裁决法则：
-        // 1. 如果车辆处于行进中 (speed >= 3.0 km/h 或者已经产生有效前进航向)
-        // -> 坚决以车辆前进航向 (motionHeading) 为准！
-        if (this.currentSpeedKmh >= 3.0 && this.motionHeading !== null) {
-          this.applyHeading(this.motionHeading, 0.45);
-        } else if (this.currentSpeedKmh < 3.0) {
-          // 2. 如果车辆在红绿灯路口静止，优先使用手机支架的指南针罗盘朝向
-          if (this.compassHeading !== null) {
-            this.applyHeading(this.compassHeading, 0.25);
-          }
-          // 否则保持最后一次前进航向不变 (锁存)
+        // 前进过程中 (速度 >= 4 km/h 且有前进航向) 严格指向前进方向！
+        if (this.currentSpeedKmh >= 4.0 && this.motionHeading !== null) {
+          this.currentHeading = this.motionHeading;
+        } else if (this.currentSpeedKmh < 4.0 && this.compassHeading !== null) {
+          this.currentHeading = this.compassHeading;
         }
 
         return this.currentHeading;
       }
-
-      // 单位圆周矢量插值平滑，杜绝 0° 与 360° 翻折跳跃
-      applyHeading(targetDeg, alpha = 0.35) {
-        const rad = targetDeg * MathUtils.DEG_TO_RAD;
-        this.vecX = (1 - alpha) * this.vecX + alpha * Math.sin(rad);
-        this.vecY = (1 - alpha) * this.vecY + alpha * Math.cos(rad);
-        const norm = Math.hypot(this.vecX, this.vecY);
-        if (norm > 1e-6) {
-          this.vecX /= norm;
-          this.vecY /= norm;
-        }
-        this.currentHeading = (Math.atan2(this.vecX, this.vecY) * MathUtils.RAD_TO_DEG + 360) % 360;
-      }
     }
 
-    /* ==========================================================================
-       7. 声音工程与语音精简引擎
-       ========================================================================== */
     class AudioEngine {
       constructor() {
         this.enabled = true;
@@ -1202,9 +1152,6 @@ html_template = '''<!DOCTYPE html>
       }
     }
 
-    /* ==========================================================================
-       8. iOS Safari 深度保活机制
-       ========================================================================== */
     class iOSBackgroundKeeper {
       constructor() {
         this.audioEl = null;
@@ -1279,9 +1226,6 @@ html_template = '''<!DOCTYPE html>
 
     const bgKeeper = new iOSBackgroundKeeper();
 
-    /* ==========================================================================
-       9. 东八区时间 (UTC+8) 自动日夜主题调度器
-       ========================================================================== */
     const TimeThemeManager = {
       getBeijingDate: function() {
         const now = new Date();
@@ -1301,7 +1245,7 @@ html_template = '''<!DOCTYPE html>
     };
 
     /* ==========================================================================
-       10. 核心巡航雷达主应用
+       10. 核心巡航雷达主应用 (纯净真机 GPS，前瞻偏置与速度自适应缩放)
        ========================================================================== */
     class RadarCruiseApp {
       constructor() {
@@ -1313,34 +1257,26 @@ html_template = '''<!DOCTYPE html>
 
         this.directionParser = new PointDirectionParser();
         this.speedEngine = new SpeedAdaptiveWarningEngine();
-        this.motionTracker = new VehicleMotionHeadingTracker(); // 车辆前进航向追踪融合器
+        this.motionTracker = new VehicleMotionHeadingTracker();
 
         this.currentPos = { lat: 23.1315, lng: 113.2750 };
-        this.heading = 270;
+        this.heading = 0;
         this.speedKmh = 0.0;
         this.warningDistance = 120;
         this.fovAngle = 40;
-        this.mode = 'gps'; // 默认启动直接进入真实真机 GPS 模式！
         this.distMode = 'auto';
         this.mapFollow = true;
 
         this.themeMode = 'auto';
         this.currentTheme = 'night';
 
+        this.currentZoom = 17.5; // 当前缩放等级
+        this.lastZoomUpdateSpeed = 0;
+
         this.alertedMap = new Map();
         this.activeTarget = null;
         this.activeMarker = null;
 
-        this.simPath = [
-          [23.1314, 113.2980],
-          [23.1315, 113.2840],
-          [23.1306, 113.2713],
-          [23.1324, 113.2589],
-          [23.1330, 113.2450]
-        ];
-        this.simStep = 0;
-        this.simProgress = 0;
-        this.simTimer = null;
         this.gpsWatchId = null;
 
         this.initDOM();
@@ -1366,8 +1302,7 @@ html_template = '''<!DOCTYPE html>
         this.elDistBox = document.getElementById('hud-dist-box');
         this.elPeripheralFrame = document.getElementById('peripheral-alert-frame');
 
-        document.getElementById('btn-mode-gps').onclick = () => this.setMode('gps');
-        document.getElementById('btn-mode-sim').onclick = () => this.setMode('sim');
+        document.getElementById('btn-recenter-main').onclick = () => this.recenter();
         document.getElementById('btn-dist-toggle').onclick = () => this.cycleWarningDistance();
         document.getElementById('btn-voice-toggle').onclick = () => this.toggleVoice();
         document.getElementById('btn-recenter').onclick = () => this.recenter();
@@ -1445,7 +1380,7 @@ html_template = '''<!DOCTYPE html>
       }
 
       initMap() {
-        this.map = L.map('map', { zoomControl: false, attributionControl: false }).setView([this.currentPos.lat, this.currentPos.lng], 16);
+        this.map = L.map('map', { zoomControl: false, attributionControl: false }).setView([this.currentPos.lat, this.currentPos.lng], this.currentZoom);
 
         L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
           subdomains: ['1', '2', '3', '4'],
@@ -1518,17 +1453,49 @@ html_template = '''<!DOCTYPE html>
         audio.speak('已展开全广州摄像头分布');
       }
 
-      // 更新手机电子罗盘数据 (静止或慢速时实时响应车把旋转)
+      // 电子罗盘事件快速更新
       onCompassUpdate(compassHeading) {
         this.motionTracker.updateCompass(compassHeading);
-        if (this.mode === 'gps' && this.speedKmh < 4.0) {
+        // 静止或低速下，指针秒级直出
+        if (this.speedKmh < 4.0) {
           this.heading = this.motionTracker.currentHeading;
           this.updateRadarSector();
           this.updateCockpit();
         }
       }
 
-      // 更新纯净雷达扇区 (跟随车头前进方向平滑指向)
+      // 速度自适应智能缩放 & 前方视野偏置定位 (Look-Ahead Camera View)
+      updateCameraAndZoom() {
+        if (!this.mapFollow) return;
+
+        // 1. 速度自适应缩放等级
+        let targetZoom = 17.5;
+        if (this.speedKmh < 5.0) {
+          targetZoom = 18.0; // 静止/起步放大，超清看清路口
+        } else if (this.speedKmh <= 25.0) {
+          targetZoom = 17.5; // 20~25 km/h 骑行
+        } else {
+          targetZoom = 17.0; // 快速骑行，看更远前方
+        }
+
+        // 2. 车头前方偏置视距 (Look-Ahead): 将地图中心向车头前方延伸 70 米
+        // 这样当前车标位于屏幕中下方，前方 75% 宽广视野留给即将到达的监控点！
+        const lookAheadDist = (this.speedKmh >= 4.0) ? 75.0 : 25.0;
+        const targetCenter = MathUtils.calculateDestinationPoint(
+          this.currentPos.lat,
+          this.currentPos.lng,
+          lookAheadDist,
+          this.heading
+        );
+
+        if (Math.abs(this.currentZoom - targetZoom) >= 0.5) {
+          this.currentZoom = targetZoom;
+          this.map.flyTo(targetCenter, targetZoom, { animate: true, duration: 0.8 });
+        } else {
+          this.map.panTo(targetCenter, { animate: true, duration: 0.25 });
+        }
+      }
+
       updateRadarSector() {
         const center = [this.currentPos.lat, this.currentPos.lng];
         const dist = this.warningDistance;
@@ -1544,7 +1511,6 @@ html_template = '''<!DOCTYPE html>
         points.push(center);
         this.radarSector.setLatLngs(points);
 
-        // 旋转车头图标: 箭头永远指向前进方向
         const core = document.getElementById('car-core');
         if (core) core.style.transform = `rotate(${this.heading}deg)`;
       }
@@ -1571,6 +1537,7 @@ html_template = '''<!DOCTYPE html>
           const angleOffset = MathUtils.getAngleDiff(this.heading, bearingToPoint);
           if (angleOffset > this.fovAngle) continue;
 
+          // 对向车道静音过滤
           const dirInfo = this.directionParser.parsePointDirection(p[2]);
           const matchResult = this.directionParser.evaluateRiderHeading(this.heading, dirInfo);
           if (!matchResult.shouldAlert) continue;
@@ -1672,10 +1639,10 @@ html_template = '''<!DOCTYPE html>
       resetAlertHUD() {
         this.elAlertCard.className = 'alert-card status-safe';
         this.elBadgeStatus.className = 'badge-status';
-        this.elStatusText.innerText = '巡航雷达运行中';
+        this.elStatusText.innerText = 'GPS 高精巡航中';
         this.elDistBox.className = 'hud-dist-box';
         this.elAlertTitle.innerText = '前方道路通畅';
-        this.elAlertDesc.innerText = `航向 ${headingToText(this.heading)} · 雷达守护中`;
+        this.elAlertDesc.innerText = `航向 ${headingToText(this.heading)} · 沿途监控扫描中`;
         this.elAlertDist.innerText = '--';
         this.elEta.innerText = '--';
         this.elAlertProgress.style.width = '0%';
@@ -1693,7 +1660,7 @@ html_template = '''<!DOCTYPE html>
         this.elArrow.style.transform = `rotate(${this.heading}deg)`;
       }
 
-      /* ================= 真实 iPhone GPS 巡航 (前进时强力追踪前进方向) ================= */
+      /* 真实高精定位巡航 */
       startGPS() {
         this.stopGPS();
         if (!('geolocation' in navigator)) {
@@ -1701,14 +1668,12 @@ html_template = '''<!DOCTYPE html>
           return;
         }
 
-        // 切换为真实定位提示
-        this.elStatusText.innerText = '正在搜索 GPS 卫星...';
+        this.elStatusText.innerText = '正在锁定 GPS 卫星...';
 
         this.gpsWatchId = navigator.geolocation.watchPosition(
           (pos) => {
             const wgsLat = pos.coords.latitude;
             const wgsLng = pos.coords.longitude;
-            // 消除 iOS 在国内的偏离
             const [gcjLng, gcjLat] = CoordTransform.wgs84ToGcj02(wgsLng, wgsLat);
 
             let spdKmh = 0.0;
@@ -1725,11 +1690,10 @@ html_template = '''<!DOCTYPE html>
             this.updateRadarSector();
             this.updateCockpit();
             this.evaluateNearbyTargets();
-
-            if (this.mapFollow) this.map.panTo([gcjLat, gcjLng], { animate: true });
+            this.updateCameraAndZoom(); // 动态速度缩放与前方视野偏置
           },
           (err) => console.warn('GPS Error:', err.message),
-          { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+          { enableHighAccuracy: true, maximumAge: 800, timeout: 10000 }
         );
       }
 
@@ -1737,73 +1701,6 @@ html_template = '''<!DOCTYPE html>
         if (this.gpsWatchId !== null) {
           navigator.geolocation.clearWatch(this.gpsWatchId);
           this.gpsWatchId = null;
-        }
-      }
-
-      startSimulation() {
-        this.stopSimulation();
-        this.simStep = 0;
-        this.simProgress = 0;
-        this.speedKmh = 29.5;
-
-        const tickInterval = 200;
-        const speedMs = this.speedKmh * 1000 / 3600;
-        const distPerTick = speedMs * (tickInterval / 1000);
-
-        this.simTimer = setInterval(() => {
-          if (this.simStep >= this.simPath.length - 1) {
-            this.simStep = 0;
-            this.simProgress = 0;
-          }
-
-          const p1 = this.simPath[this.simStep];
-          const p2 = this.simPath[this.simStep + 1];
-
-          const legDistance = MathUtils.getDistance(p1[0], p1[1], p2[0], p2[1]);
-          this.heading = MathUtils.getBearing(p1[0], p1[1], p2[0], p2[1]);
-
-          this.simProgress += distPerTick / legDistance;
-          if (this.simProgress >= 1.0) {
-            this.simProgress = 0;
-            this.simStep++;
-          }
-
-          const curLat = p1[0] + (p2[0] - p1[0]) * this.simProgress;
-          const curLng = p1[1] + (p2[1] - p1[1]) * this.simProgress;
-
-          this.currentPos = { lat: curLat, lng: curLng };
-          this.vehicleMarker.setLatLng([curLat, curLng]);
-          this.updateRadarSector();
-          this.updateCockpit();
-          this.evaluateNearbyTargets();
-
-          if (this.mapFollow) this.map.panTo([curLat, curLng], { animate: false });
-        }, tickInterval);
-      }
-
-      stopSimulation() {
-        if (this.simTimer) {
-          clearInterval(this.simTimer);
-          this.simTimer = null;
-        }
-      }
-
-      setMode(mode) {
-        this.mode = mode;
-        const btnSim = document.getElementById('btn-mode-sim');
-        const btnGps = document.getElementById('btn-mode-gps');
-        if (mode === 'sim') {
-          btnSim.classList.add('active');
-          btnGps.classList.remove('active');
-          this.stopGPS();
-          this.startSimulation();
-          audio.speak('已开启模拟路线演练');
-        } else {
-          btnGps.classList.add('active');
-          btnSim.classList.remove('active');
-          this.stopSimulation();
-          this.startGPS();
-          audio.speak('已启动真机GPS高精巡航，前进时方向将自动指向行驶方向');
         }
       }
 
@@ -1845,7 +1742,7 @@ html_template = '''<!DOCTYPE html>
       recenter() {
         HapticsEngine.vibrate('tap');
         this.mapFollow = true;
-        this.map.setView([this.currentPos.lat, this.currentPos.lng], 16, { animate: true });
+        this.updateCameraAndZoom();
       }
     }
 
@@ -1866,16 +1763,15 @@ html_template = '''<!DOCTYPE html>
 
     let app = null;
 
-    // 启动交互: 同时解锁音频、请求 iOS 动作罗盘权限、启动 GPS
     document.getElementById('btn-start-experience').addEventListener('click', () => {
       audio.init();
       audio.playApproachChime();
-      audio.speak('骑行巡航雷达已启动');
+      audio.speak('高精巡航雷达已启动，祝您骑行平安');
 
       bgKeeper.start();
       requestWakeLock();
 
-      // 核心：请求 iOS 专属电子罗盘权限 (DeviceOrientationEvent.requestPermission)
+      // 请求 iOS 专属罗盘权限
       if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
           .then(res => {
@@ -1897,14 +1793,13 @@ html_template = '''<!DOCTYPE html>
       }
 
       app = new RadarCruiseApp();
-      app.startGPS(); // 默认直接进入真实 GPS 定位巡航模式！
+      app.startGPS();
     });
 
-    // 电子罗盘实时事件监听
+    // 罗盘事件极速直达
     function handleOrientationEvent(e) {
       if (!app) return;
       let heading = null;
-      // iOS Safari 专有高精度绝对真北罗盘朝向
       if (typeof e.webkitCompassHeading !== 'undefined' && e.webkitCompassHeading !== null) {
         heading = e.webkitCompassHeading;
       } else if (e.alpha !== null) {
@@ -1922,7 +1817,6 @@ html_template = '''<!DOCTYPE html>
 with open('rider_radar.html', 'w', encoding='utf-8') as f:
     f.write(html_template)
 
-# 同步到 index.html
 with open('index.html', 'w', encoding='utf-8') as f:
     f.write(html_template)
 
