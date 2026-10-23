@@ -18,16 +18,16 @@ html_template = '''<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=no">
   <title>骑行巡航雷达 (广州 1,830监控)</title>
   
-  <!-- iOS PWA Meta & Web App 配置 -->
+  <!-- iOS PWA Meta & Web App 配置 (解决 Safari black-translucent 引起的 chin gap 底部大白条 Bug) -->
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="骑行雷达">
-  <meta name="theme-color" content="#0b0f19" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#080c16" id="meta-theme-color">
   <meta name="format-detection" content="telephone=no,email=no,address=no">
 
   <!-- iOS 桌面高清应用图标 -->
@@ -43,6 +43,7 @@ html_template = '''<!DOCTYPE html>
   
   <style>
     :root {
+      --bg-dark: #080c16;
       --accent-cyan: #00f2fe;
       --accent-blue: #2563eb;
       --accent-green: #10b981;
@@ -62,23 +63,46 @@ html_template = '''<!DOCTYPE html>
       touch-action: manipulation;
     }
 
-    html, body {
+    html {
       width: 100%;
       height: 100%;
-      height: 100dvh;
+      min-height: 100%;
+      margin: 0;
+      padding: 0;
       overflow: hidden;
       background-color: var(--bg-dark);
-      color: var(--text-main);
+    }
+
+    body {
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
       position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      inset: 0;
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: auto;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
       transition: background-color 0.3s ease, color 0.3s ease;
     }
 
     #map {
-      width: 100%;
-      height: 100%;
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
+      right: 0;
+      bottom: 0;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
       z-index: 1;
     }
 
@@ -216,7 +240,7 @@ html_template = '''<!DOCTYPE html>
 
     /* ================= 3. 顶部 HUD 独立容器 (防 iPhone 16 灵动岛遮挡) ================= */
     .top-hud {
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
       right: 0;
@@ -341,7 +365,7 @@ html_template = '''<!DOCTYPE html>
 
     /* ================= 4. 底部驾驶舱独立容器 (贴底 Dock 风格，严密覆盖 iPhone 16 底部手势区) ================= */
     .bottom-cockpit {
-      position: absolute;
+      position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
@@ -351,6 +375,7 @@ html_template = '''<!DOCTYPE html>
       flex-direction: column;
       align-items: center;
       padding: 0;
+      margin: 0;
     }
 
     .cockpit-panel {
@@ -365,7 +390,10 @@ html_template = '''<!DOCTYPE html>
       border-right: var(--card-border);
       border-bottom: none;
       border-radius: 26px 26px 0 0;
-      padding: 14px 18px max(14px, calc(env(safe-area-inset-bottom, 20px) + 8px)) 18px;
+      padding-top: 14px;
+      padding-left: 18px;
+      padding-right: 18px;
+      padding-bottom: max(22px, calc(14px + env(safe-area-inset-bottom, 20px)));
       box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
       margin-bottom: 0;
       transition: all 0.3s ease;
@@ -531,7 +559,7 @@ html_template = '''<!DOCTYPE html>
 
     /* 浮动右侧工具栏 */
     .floating-tools {
-      position: absolute;
+      position: fixed;
       right: 14px;
       top: 50%;
       transform: translateY(-50%);
@@ -1408,6 +1436,12 @@ html_template = '''<!DOCTYPE html>
       applyTheme(theme, announce = false) {
         this.currentTheme = theme;
         document.body.className = `theme-${theme}`;
+        document.documentElement.className = `theme-${theme}`;
+
+        const metaTheme = document.getElementById('meta-theme-color');
+        if (metaTheme) {
+          metaTheme.setAttribute('content', theme === 'sunlight' ? '#ffffff' : '#080c16');
+        }
 
         const iconSun = document.getElementById('icon-theme-sun');
         const iconMoon = document.getElementById('icon-theme-moon');
@@ -1920,10 +1954,25 @@ html_template = '''<!DOCTYPE html>
       }
     }
 
+    // 视口动态绝对同步：解决 iOS Safari 全屏/工具栏折叠时可能产生的视觉高度断层
+    function syncViewport() {
+      const realHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      document.documentElement.style.setProperty('--real-vh', `${realHeight}px`);
+      if (app && app.map) {
+        app.map.invalidateSize();
+      }
+    }
+    window.addEventListener('resize', syncViewport);
+    window.addEventListener('orientationchange', () => setTimeout(syncViewport, 200));
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', syncViewport);
+    }
+
     // 页面加载完成后立即自动进入车机巡航，零首页无遮挡！
     window.addEventListener('DOMContentLoaded', () => {
       app = new RadarCruiseApp();
       app.startGPS(); // 立即触发浏览器系统定位授权
+      syncViewport();
 
       // 绑定一次性手势触摸激活罗盘与音频 (任意滑动地图或点击按钮即生效)
       document.addEventListener('click', activateSensorsOnce, { once: true });
