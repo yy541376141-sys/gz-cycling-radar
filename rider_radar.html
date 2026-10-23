@@ -323,7 +323,7 @@
     .warning .hud-progress-bar { background: var(--accent-amber); }
     .danger .hud-progress-bar { background: var(--accent-red); }
 
-    /* ================= 4. 底部驾驶舱独立容器 (严谨定位在屏幕底端) ================= */
+    /* ================= 4. 底部驾驶舱独立容器 (贴底 Dock 风格，严密覆盖 iPhone 16 底部手势区) ================= */
     .bottom-cockpit {
       position: absolute;
       bottom: 0;
@@ -334,29 +334,41 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 0 14px max(14px, env(safe-area-inset-bottom)) 14px;
+      padding: 0;
     }
 
     .cockpit-panel {
       pointer-events: auto;
       width: 100%;
-      max-width: 440px;
+      max-width: 480px;
       background: var(--card-bg);
       backdrop-filter: var(--card-blur);
       -webkit-backdrop-filter: var(--card-blur);
-      border: var(--card-border);
-      border-radius: 22px;
-      padding: 12px 18px;
-      box-shadow: var(--card-shadow);
-      margin-bottom: 4px;
+      border-top: var(--card-border);
+      border-left: var(--card-border);
+      border-right: var(--card-border);
+      border-bottom: none;
+      border-radius: 26px 26px 0 0;
+      padding: 14px 18px max(14px, calc(env(safe-area-inset-bottom, 20px) + 8px)) 18px;
+      box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+      margin-bottom: 0;
       transition: all 0.3s ease;
+    }
+
+    @media (max-width: 500px) {
+      .cockpit-panel {
+        border-left: none;
+        border-right: none;
+        border-radius: 24px 24px 0 0;
+      }
     }
 
     .instruments-row {
       display: flex;
       align-items: center;
-      justify-content: space-around;
-      margin-bottom: 10px;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding: 0 4px;
     }
 
     .inst-item {
@@ -364,20 +376,50 @@
       flex-direction: column;
       align-items: center;
       text-align: center;
-      flex: 1;
     }
 
-    .inst-label { font-size: 11px; color: var(--text-sub); letter-spacing: 0.5px; margin-bottom: 2px; }
-    .speed-value {
-      font-size: 34px;
-      font-weight: 900;
+    .inst-item.inst-side {
+      flex: 1;
+      min-width: 72px;
+    }
+
+    .inst-item.inst-hero {
+      flex: 1.5;
+    }
+
+    .inst-label {
+      font-size: 11px;
+      color: var(--text-sub);
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+      font-weight: 600;
+    }
+
+    .speed-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       line-height: 1;
+    }
+
+    .speed-value {
+      font-size: 50px;
+      font-weight: 900;
+      line-height: 0.95;
       color: var(--text-value);
       font-feature-settings: "tnum";
       font-variant-numeric: tabular-nums;
-      letter-spacing: -1.2px;
+      letter-spacing: -2px;
     }
-    .speed-unit { font-size: 11px; color: var(--text-accent); font-weight: 700; margin-top: 2px; }
+
+    .speed-unit {
+      font-size: 11.5px;
+      color: var(--text-accent);
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      margin-top: 3px;
+    }
 
     .heading-arrow {
       font-size: 26px;
@@ -386,9 +428,33 @@
       display: inline-block;
       line-height: 1;
     }
-    .heading-text { font-size: 12.5px; font-weight: 700; color: var(--text-main); margin-top: 3px; }
-    .target-count { font-size: 26px; font-weight: 800; line-height: 1; color: var(--text-main); }
-    .inst-divider { width: 1px; height: 34px; background: var(--border-subtle); }
+
+    .heading-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-top: 4px;
+    }
+
+    .target-count {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--text-main);
+    }
+
+    .eta-unit {
+      font-size: 11px;
+      color: var(--text-sub);
+      font-weight: 700;
+      margin-top: 3px;
+    }
+
+    .inst-divider {
+      width: 1px;
+      height: 38px;
+      background: var(--border-subtle);
+    }
 
     /* 精简 3 键大触控区 */
     .controls-grid {
@@ -422,6 +488,31 @@
     }
     .btn-act svg { width: 19px; height: 19px; stroke-width: 2.3; }
 
+    /* 底部安全区点缀栏 (消除 iPhone 16 底部空白，显示高精状态) */
+    .cockpit-footer-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--text-sub);
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .footer-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      margin-right: 4px;
+      box-shadow: 0 0 6px var(--accent-green);
+    }
+    .cockpit-footer-sep {
+      opacity: 0.4;
+    }
+
     /* 浮动右侧工具栏 */
     .floating-tools {
       position: absolute;
@@ -451,6 +542,11 @@
       position: relative;
     }
     .btn-tool:active { transform: translateY(2px) scale(0.92); }
+    .btn-tool.active {
+      background: var(--btn-active-bg);
+      border: var(--btn-active-border);
+      color: var(--btn-active-text);
+    }
 
     .badge-auto {
       position: absolute;
@@ -570,7 +666,7 @@
 
   <!-- 浮动右侧快捷工具 -->
   <div class="floating-tools">
-    <button class="btn-tool" id="btn-recenter" title="定位到车头">
+    <button class="btn-tool active" id="btn-recenter" title="定位到车头">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
     </button>
     <button class="btn-tool" id="btn-view-all" title="全览广州摄像头">
@@ -609,33 +705,42 @@
     </div>
   </div>
 
-  <!-- 底部驾驶舱仪表 (独立固定底端) -->
+  <!-- 底部驾驶舱仪表 (贴底全屏 Dock) -->
   <div class="bottom-cockpit">
     <div class="cockpit-panel">
       <div class="instruments-row">
-        <div class="inst-item">
-          <span class="inst-label">当前时速</span>
-          <div class="speed-value" id="inst-speed">0.0</div>
-          <span class="speed-unit">KM/H</span>
-        </div>
-        <div class="inst-divider"></div>
-        <div class="inst-item">
+        <!-- 1. 行驶航向 (居左) -->
+        <div class="inst-item inst-side">
           <span class="inst-label">行驶航向</span>
           <div class="heading-arrow" id="inst-arrow">↑</div>
           <div class="heading-text" id="inst-heading">--°</div>
         </div>
+
         <div class="inst-divider"></div>
-        <div class="inst-item">
+
+        <!-- 2. 当前时速 (居中突出放大) -->
+        <div class="inst-item inst-hero">
+          <span class="inst-label">当前时速</span>
+          <div class="speed-container">
+            <span class="speed-value" id="inst-speed">0.0</span>
+            <span class="speed-unit">KM/H</span>
+          </div>
+        </div>
+
+        <div class="inst-divider"></div>
+
+        <!-- 3. 预计到达 (居右) -->
+        <div class="inst-item inst-side">
           <span class="inst-label">预计到达</span>
           <div class="target-count" id="inst-eta">--</div>
-          <span class="speed-unit">秒</span>
+          <span class="eta-unit">秒</span>
         </div>
       </div>
 
       <div class="controls-grid">
         <button class="btn-act active" id="btn-recenter-main">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg>
-          <span>车头居中</span>
+          <span id="lbl-recenter">车头居中</span>
         </button>
         <button class="btn-act" id="btn-dist-toggle">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="6" x2="12" y2="12"/></svg>
@@ -645,6 +750,15 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
           <span id="lbl-voice">语音开</span>
         </button>
+      </div>
+
+      <!-- 底部安全区点缀栏 (消除 iPhone 16 底部空白，实时卫导状态) -->
+      <div class="cockpit-footer-bar">
+        <span class="cockpit-footer-item"><span class="footer-dot"></span>GPS卫导巡航</span>
+        <span class="cockpit-footer-sep">·</span>
+        <span class="cockpit-footer-item" id="footer-acc">精度 ±3m</span>
+        <span class="cockpit-footer-sep">·</span>
+        <span class="cockpit-footer-item">广州 1,830 监控</span>
       </div>
     </div>
   </div>
@@ -900,6 +1014,27 @@
         this.synth = window.speechSynthesis;
         this.lastSpokenText = '';
         this.lastSpokenTime = 0;
+        this.selectedVoice = null;
+        this.initVoicePicker();
+      }
+
+      initVoicePicker() {
+        if (!this.synth) return;
+        const loadVoices = () => {
+          try {
+            const voices = this.synth.getVoices();
+            if (!voices || !voices.length) return;
+            // 优先匹配高质量 Siri 中文人声或 Premium / Enhanced 语音 (音质最厚实响亮)
+            this.selectedVoice = voices.find(v => (v.lang === 'zh-CN' || v.lang.startsWith('zh')) && 
+              (v.name.includes('Siri') || v.name.includes('Enhanced') || v.name.includes('Premium'))) ||
+              voices.find(v => v.lang === 'zh-CN') ||
+              voices.find(v => v.lang && v.lang.startsWith('zh')) || null;
+          } catch (e) {}
+        };
+        loadVoices();
+        if (typeof this.synth.onvoiceschanged !== 'undefined') {
+          this.synth.onvoiceschanged = loadVoices;
+        }
       }
 
       init() {
@@ -932,15 +1067,26 @@
         try {
           const ctx = this.audioCtx;
           const now = ctx.currentTime;
+
+          // 动态范围压缩器：提升低分贝细节并限制峰值，使手机喇叭声音饱满响亮、绝不破音
+          const compressor = ctx.createDynamicsCompressor();
+          compressor.threshold.setValueAtTime(-10, now);
+          compressor.knee.setValueAtTime(8, now);
+          compressor.ratio.setValueAtTime(10, now);
+          compressor.attack.setValueAtTime(0.002, now);
+          compressor.release.setValueAtTime(0.12, now);
+          compressor.connect(ctx.destination);
+
           const masterGain = ctx.createGain();
-          masterGain.gain.setValueAtTime(0.5, now);
+          masterGain.gain.setValueAtTime(1.0, now); // 全额推满主增益 (100% 满格)
+          masterGain.connect(compressor);
 
           const filter = ctx.createBiquadFilter();
           filter.type = 'lowpass';
-          filter.frequency.setValueAtTime(4500, now);
-          filter.Q.setValueAtTime(0.85, now);
+          filter.frequency.setValueAtTime(5500, now);
+          filter.Q.setValueAtTime(1.0, now);
           masterGain.connect(filter);
-          filter.connect(ctx.destination);
+          filter.connect(compressor);
 
           const playHarmonic = (freq, startTime, dur, vol) => {
             const osc = ctx.createOscillator();
@@ -948,28 +1094,30 @@
             osc.type = 'sine';
             osc.frequency.setValueAtTime(freq, startTime);
             gain.gain.setValueAtTime(0.0001, startTime);
-            gain.gain.exponentialRampToValueAtTime(vol, startTime + 0.005);
+            gain.gain.exponentialRampToValueAtTime(vol, startTime + 0.006);
             gain.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
             osc.connect(gain);
             gain.connect(masterGain);
             osc.start(startTime);
             osc.stop(startTime + dur);
 
+            // 泛音加强（添加三角波高频分量，极大增强室外骑行风噪环境下的听觉穿透力）
             const osc2 = ctx.createOscillator();
             const gain2 = ctx.createGain();
-            osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(freq * 2, startTime);
+            osc2.type = 'triangle';
+            osc2.frequency.setValueAtTime(freq * 1.5, startTime);
             gain2.gain.setValueAtTime(0.0001, startTime);
-            gain2.gain.exponentialRampToValueAtTime(vol * 0.25, startTime + 0.004);
-            gain2.gain.exponentialRampToValueAtTime(0.0001, startTime + dur * 0.65);
+            gain2.gain.exponentialRampToValueAtTime(vol * 0.45, startTime + 0.005);
+            gain2.gain.exponentialRampToValueAtTime(0.0001, startTime + dur * 0.7);
             osc2.connect(gain2);
             gain2.connect(masterGain);
             osc2.start(startTime);
             osc2.stop(startTime + dur);
           };
 
-          playHarmonic(880, now, 0.18, 0.45);
-          playHarmonic(1174.66, now + 0.115, 0.26, 0.40);
+          // 经典警示双音：1046.5Hz (C6) -> 1318.5Hz (E6)，高亢清脆，穿透风噪
+          playHarmonic(1046.5, now, 0.20, 0.95);
+          playHarmonic(1318.5, now + 0.12, 0.32, 0.90);
         } catch (e) {}
       }
 
@@ -980,26 +1128,26 @@
           const ctx = this.audioCtx;
           const now = ctx.currentTime;
           const masterGain = ctx.createGain();
-          masterGain.gain.setValueAtTime(0.4, now);
+          masterGain.gain.setValueAtTime(0.85, now);
 
           const filter = ctx.createBiquadFilter();
           filter.type = 'lowpass';
-          filter.frequency.setValueAtTime(1200, now);
+          filter.frequency.setValueAtTime(2400, now);
           masterGain.connect(filter);
           filter.connect(ctx.destination);
 
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           osc.type = 'triangle';
-          osc.frequency.setValueAtTime(523.25, now);
-          osc.frequency.exponentialRampToValueAtTime(392.00, now + 0.18);
+          osc.frequency.setValueAtTime(659.25, now);
+          osc.frequency.exponentialRampToValueAtTime(440.00, now + 0.20);
           gain.gain.setValueAtTime(0.0001, now);
-          gain.gain.exponentialRampToValueAtTime(0.35, now + 0.012);
-          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+          gain.gain.exponentialRampToValueAtTime(0.75, now + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
           osc.connect(gain);
           gain.connect(masterGain);
           osc.start(now);
-          osc.stop(now + 0.25);
+          osc.stop(now + 0.30);
         } catch (e) {}
       }
 
@@ -1011,11 +1159,28 @@
         this.lastSpokenTime = now;
 
         try {
-          this.synth.cancel();
+          // 解决 iOS Safari 连续 cancel 会吞掉下一次 speak 的系统级 Bug
+          if (this.synth.speaking) {
+            this.synth.cancel();
+            setTimeout(() => this._executeSpeak(text), 35);
+          } else {
+            this._executeSpeak(text);
+          }
+        } catch (e) {}
+      }
+
+      _executeSpeak(text) {
+        try {
           const utter = new SpeechSynthesisUtterance(text);
           utter.lang = 'zh-CN';
-          utter.rate = 1.12;
-          utter.pitch = 1.05;
+          utter.volume = 1.0; // 强制推满 1.0 满格音量
+          utter.rate = 1.02;   // 稳健语速，确保每个字中气十足
+          utter.pitch = 1.0;
+
+          if (this.selectedVoice) {
+            utter.voice = this.selectedVoice;
+          }
+
           this.synth.speak(utter);
         } catch (e) {}
       }
@@ -1206,10 +1371,10 @@
         this.elDistBox = document.getElementById('hud-dist-box');
         this.elPeripheralFrame = document.getElementById('peripheral-alert-frame');
 
-        document.getElementById('btn-recenter-main').onclick = () => this.recenter();
+        document.getElementById('btn-recenter-main').onclick = () => this.toggleMapFollow();
         document.getElementById('btn-dist-toggle').onclick = () => this.cycleWarningDistance();
         document.getElementById('btn-voice-toggle').onclick = () => this.toggleVoice();
-        document.getElementById('btn-recenter').onclick = () => this.recenter();
+        document.getElementById('btn-recenter').onclick = () => this.toggleMapFollow();
         document.getElementById('btn-view-all').onclick = () => this.viewAllCameras();
         document.getElementById('btn-theme-toggle').onclick = () => this.cycleThemeMode();
 
@@ -1317,6 +1482,13 @@
 
         this.updateRadarSector();
 
+        // 监听用户拖拽地图或触摸平移，自动退出车头锁定模式，按键黑白状态立即切换
+        this.map.on('dragstart', () => {
+          if (this.mapFollow) {
+            this.setMapFollow(false, false);
+          }
+        });
+
         window.addEventListener('resize', () => {
           setTimeout(() => { if (this.map) this.map.invalidateSize(); }, 200);
         });
@@ -1352,7 +1524,7 @@
       }
 
       viewAllCameras() {
-        this.mapFollow = false;
+        this.setMapFollow(false, false);
         this.map.fitBounds(this.clusterGroup.getBounds(), { padding: [40, 40] });
         audio.speak('已展开全广州摄像头分布');
       }
@@ -1366,8 +1538,8 @@
         }
       }
 
-      updateCameraAndZoom() {
-        if (!this.mapFollow) return;
+      updateCameraAndZoom(force = false) {
+        if (!this.mapFollow && !force) return;
 
         let targetZoom = 17.5;
         if (this.speedKmh < 5.0) {
@@ -1386,7 +1558,9 @@
           this.heading
         );
 
-        if (Math.abs(this.currentZoom - targetZoom) >= 0.5) {
+        if (force) {
+          this.map.flyTo(targetCenter, this.currentZoom || targetZoom, { animate: true, duration: 0.5 });
+        } else if (Math.abs(this.currentZoom - targetZoom) >= 0.5) {
           this.currentZoom = targetZoom;
           this.map.flyTo(targetCenter, targetZoom, { animate: true, duration: 0.8 });
         } else {
@@ -1587,6 +1761,11 @@
             this.updateCockpit();
             this.evaluateNearbyTargets();
             this.updateCameraAndZoom();
+
+            if (pos.coords.accuracy) {
+              const elAcc = document.getElementById('footer-acc');
+              if (elAcc) elAcc.innerText = `精度 ±${Math.round(pos.coords.accuracy)}m`;
+            }
           },
           (err) => {
             console.warn('GPS Error:', err.message);
@@ -1631,17 +1810,41 @@
         if (audio.enabled) {
           btn.classList.add('active');
           lbl.innerText = '语音开';
-          audio.speak('语音播报已开启');
+          audio.playApproachChime();
+          audio.speak('语音播报已开启，音量已最大');
         } else {
           btn.classList.remove('active');
           lbl.innerText = '静音';
         }
       }
 
-      recenter() {
+      setMapFollow(enabled, announce = false) {
+        this.mapFollow = enabled;
+        const btnMain = document.getElementById('btn-recenter-main');
+        const btnFloat = document.getElementById('btn-recenter');
+        const lbl = document.getElementById('lbl-recenter');
+
+        if (enabled) {
+          if (btnMain) btnMain.classList.add('active');
+          if (btnFloat) btnFloat.classList.add('active');
+          if (lbl) lbl.innerText = '车头居中';
+          this.updateCameraAndZoom(true);
+          if (announce) audio.speak('已开启车头居中跟随');
+        } else {
+          if (btnMain) btnMain.classList.remove('active');
+          if (btnFloat) btnFloat.classList.remove('active');
+          if (lbl) lbl.innerText = '自由浏览';
+          if (announce) audio.speak('已解锁自由浏览');
+        }
+      }
+
+      toggleMapFollow() {
         HapticsEngine.vibrate('tap');
-        this.mapFollow = true;
-        this.updateCameraAndZoom();
+        this.setMapFollow(!this.mapFollow, true);
+      }
+
+      recenter() {
+        this.setMapFollow(true, true);
       }
     }
 
